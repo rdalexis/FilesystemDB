@@ -6,17 +6,34 @@ from mysql.connector import errorcode
 
 DB_NAME = 'filesystem'
 
+DROP_TREE = "DROP TABLE IF EXISTS `tree`"
+DROP_FATTRB = "DROP TABLE IF EXISTS `fattrb`"
+DROP_FDATA = "DROP TABLE IF EXISTS `fdata`"
+
 TABLES = {}
 TABLES['tree'] = (
     "CREATE TABLE `tree` ("
     "`fid` int(10) unsigned NOT NULL auto_increment,"
     "`parentid` int(10) unsigned default NULL,"
-    "`name` varchar(255) NOT NULL,"
+    "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
     "UNIQUE KEY `name` (`name`,`parentid`),"
     "KEY `fid` (`fid`),"
     "KEY `parentid` (`parentid`)"
     ") DEFAULT CHARSET=utf8"
     )
+
+TABLES['fattrb'] = (
+   "CREATE TABLE `fattrb` ("
+   "`fid` bigint(20) NOT NULL,"
+   "`mode` int(11) NOT NULL default '0',"
+   "`uid` int(10) unsigned NOT NULL default '0',"
+   "`gid` int(10) unsigned NOT NULL default '0',"
+   "`nlink` int(10) unsigned NOT NULL default '0',"
+   "`mtime` int(10) unsigned NOT NULL default '0',"
+   "`size` bigint(20) NOT NULL default '0',"
+   "PRIMARY KEY  (`fid`)"
+   ") DEFAULT CHARSET=binary"
+   )
 
 cnx = mysql.connector.connect(user='root', password='root',
                               host='127.0.0.1')
@@ -42,6 +59,10 @@ except mysql.connector.Error as err:
         print(err)
         exit(1)
 
+# Drop tables
+cursor.execute(DROP_TREE);
+cursor.execute(DROP_FATTRB);
+
 for table_name in TABLES:
     table_description = TABLES[table_name]
     try:
@@ -55,29 +76,48 @@ for table_name in TABLES:
     else:
         print("OK")
 
-add_tree_entry = ("INSERT INTO tree "
-               "(fid, parentid, name) "
-               "VALUES (%s, %s, %s)")
+add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
+add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
 
 #tree_entry = list()
 fileid = 0
 #parentid = None
 
+def f_attributes(fid, attr):
+    print(fid)
+    print('\n')
+    print(attr)
+    if not attr is None:
+       fattrb = []
+       fattrb.append(fid)
+       fattrb.append(attr.st_mode)
+       fattrb.append(attr.st_uid)
+       fattrb.append(attr.st_gid)
+       fattrb.append(attr.st_nlink)
+       fattrb.append(attr.st_mtime)
+       fattrb.append(attr.st_size)
+       cursor.execute(add_fattrb_entry, fattrb)
+
 def scan_directories(path, parentid):
     global fileid
-    tree_entry = []
     with os.scandir(path) as dir_entries:
         for entry in dir_entries:
             print(entry.name)
+            tree_entry = []
             fileid = fileid + 1
+            try:
+                info = entry.stat()
+                f_attributes(fileid, info)
+            except:
+                pass
             if os.path.isdir(entry):  
                tree_entry.append(fileid)
                tree_entry.append(parentid)
                tree_entry.append(entry.name) 
                cursor.execute(add_tree_entry, tree_entry)
                parentid1 = fileid
-               #fileid = fileid + 1
-               tree_entry = []
+               #tree_entry = []
                fileid = scan_directories(entry, parentid1)
                print("\nIt is a directory")  
             elif os.path.isfile(entry):  
@@ -86,13 +126,15 @@ def scan_directories(path, parentid):
                tree_entry.append(entry.name)
                cursor.execute(add_tree_entry, tree_entry)
                #fileid = fileid + 1
-               tree_entry = []
+               #tree_entry = []
                print("\nIt is a normal file")
             else:  
-                print("It is a special file (socket, FIFO, device file)" )
-            #print(fid)
-            info = entry.stat()
-            #print(info)
+               #print("It is a special file (socket, FIFO, device file)" )
+               tree_entry.append(fileid)
+               tree_entry.append(parentid)
+               tree_entry.append(entry.name)
+               cursor.execute(add_tree_entry, tree_entry)
+            #print(info) 
     return fileid
 
 scan_directories('.', None);
