@@ -4,14 +4,17 @@ import os
 import mysql.connector
 from mysql.connector import errorcode
 
+# Default size is 64MB. So, setting 50MB
+DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
 DB_NAME = 'filesystem'
+TABLES_IN_DB = ['tree', 'fattrb', 'fdata']
 
-DROP_TREE = "DROP TABLE IF EXISTS `tree`"
-DROP_FATTRB = "DROP TABLE IF EXISTS `fattrb`"
-DROP_FDATA = "DROP TABLE IF EXISTS `fdata`"
+DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
+DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
+DROP_FDATA = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[2]
 
 TABLES = {}
-TABLES['tree'] = (
+TABLES[TABLES_IN_DB[0]] = (
     "CREATE TABLE `tree` ("
     "`fid` int(10) unsigned NOT NULL auto_increment,"
     "`parentid` int(10) unsigned default NULL,"
@@ -22,7 +25,7 @@ TABLES['tree'] = (
     ") DEFAULT CHARSET=utf8"
     )
 
-TABLES['fattrb'] = (
+TABLES[TABLES_IN_DB[1]] = (
    "CREATE TABLE `fattrb` ("
    "`fid` bigint(20) NOT NULL,"
    "`mode` int(11) NOT NULL default '0',"
@@ -33,6 +36,15 @@ TABLES['fattrb'] = (
    "`size` bigint(20) NOT NULL default '0',"
    "PRIMARY KEY  (`fid`)"
    ") DEFAULT CHARSET=binary"
+   )
+
+"""`seq` int unsigned NOT NULL,"""
+TABLES[TABLES_IN_DB[2]] = (
+   "CREATE TABLE `fdata` ("
+   "`fid` bigint(20) NOT NULL,"
+   "`data` longblob,"
+   "PRIMARY KEY  (`fid`)"
+   ")  DEFAULT CHARSET=binary"
    )
 
 cnx = mysql.connector.connect(user='root', password='root',
@@ -62,6 +74,7 @@ except mysql.connector.Error as err:
 # Drop tables
 cursor.execute(DROP_TREE);
 cursor.execute(DROP_FATTRB);
+cursor.execute(DROP_FDATA);
 
 for table_name in TABLES:
     table_description = TABLES[table_name]
@@ -79,15 +92,48 @@ for table_name in TABLES:
 add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
 add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
+#add_fdata_entry = ("INSERT INTO fdata (fid, seq, data) VALUES (%s, %s, %s)")
 
-#tree_entry = list()
 fileid = 0
-#parentid = None
+
+"""
+def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
+    while True:
+        try:
+           data = file_object.read(chunk_size)
+           if not data:
+              break
+           yield data
+        except:
+           return None
+
+def file_data(fid, fentry):
+       seq = 0
+       file_to_read = open(fentry, 'rb')
+       for piece in read_in_chunks(file_to_read):
+           fdata = []
+           fdata.append(fid)
+           fdata.append(seq)
+           fdata.append(piece)
+           cursor.execute(add_fdata_entry, fdata)
+           seq = seq + 1
+       file_to_read.close()
+
+"""
+def file_data(fid, fentry):
+    try:
+       file_to_read = open(fentry, 'rb')
+       file_content = file_to_read.read()
+       file_to_read.close()
+    except:
+       print('Cannot read '+str(entry.name))
+       file_content = None
+    fdata = []
+    fdata.append(fid)
+    fdata.append(file_content)
+    cursor.execute(add_fdata_entry, fdata)
 
 def f_attributes(fid, attr):
-    print(fid)
-    print('\n')
-    print(attr)
     if not attr is None:
        fattrb = []
        fattrb.append(fid)
@@ -106,38 +152,33 @@ def scan_directories(path, parentid):
             print(entry.name)
             tree_entry = []
             fileid = fileid + 1
+            info = None
+            
             try:
                 info = entry.stat()
-                f_attributes(fileid, info)
             except:
                 pass
-            if os.path.isdir(entry):  
-               tree_entry.append(fileid)
-               tree_entry.append(parentid)
-               tree_entry.append(entry.name) 
-               cursor.execute(add_tree_entry, tree_entry)
-               parentid1 = fileid
-               #tree_entry = []
-               fileid = scan_directories(entry, parentid1)
-               print("\nIt is a directory")  
-            elif os.path.isfile(entry):  
-               tree_entry.append(fileid)
-               tree_entry.append(parentid)
-               tree_entry.append(entry.name)
-               cursor.execute(add_tree_entry, tree_entry)
-               #fileid = fileid + 1
-               #tree_entry = []
-               print("\nIt is a normal file")
-            else:  
-               #print("It is a special file (socket, FIFO, device file)" )
-               tree_entry.append(fileid)
-               tree_entry.append(parentid)
-               tree_entry.append(entry.name)
-               cursor.execute(add_tree_entry, tree_entry)
-            #print(info) 
+            if info is not None:
+                f_attributes(fileid, info)
+            
+                if os.path.isdir(entry):  
+                   tree_entry.append(fileid)
+                   tree_entry.append(parentid)
+                   tree_entry.append(entry.name) 
+                   cursor.execute(add_tree_entry, tree_entry)
+                   parentid1 = fileid
+                   fileid = scan_directories(entry, parentid1)  
+                else:  
+                   tree_entry.append(fileid)
+                   tree_entry.append(parentid)
+                   tree_entry.append(entry.name)
+                   cursor.execute(add_tree_entry, tree_entry) 
+                   file_data(fileid, entry)
+            else:
+                fileid = fileid - 1
     return fileid
 
-scan_directories('.', None);
+scan_directories('.', None)
 cnx.commit()
 cursor.close()
 cnx.close()
