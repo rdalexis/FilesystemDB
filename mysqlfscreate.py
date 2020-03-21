@@ -93,7 +93,7 @@ def create_database(cnx, cursor, dbname, fspath):
             print("Creating table : {}".format(table_name))   
 
     # populate data 
-    scan_directories(cursor, '.', None)
+    scan_directories(cursor, fspath, None)
     # There will be no update after this point, hence commit
     cnx.commit()
 

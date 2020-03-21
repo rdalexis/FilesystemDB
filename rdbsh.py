@@ -8,7 +8,8 @@ from mysqlfscreate import create_database, open_database
 
 # Import logger module
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+#logging levels : https://docs.python.org/3/library/logging.html#levels
 
 # Import of local files
 #from mysqlfscreate import CreateFSDatabase
@@ -16,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Globals
 
 # mysql connection
-def OpenMysqlConn(uname, pwd, hostip, existingdbname):
+def OpenMysqlConn(uname, pwd, hostip):
    global cnx, cursor
 
    try: 
@@ -27,8 +28,6 @@ def OpenMysqlConn(uname, pwd, hostip, existingdbname):
    else:
       cursor = cnx.cursor()
       return 0
-
-
 
 # mysql close connection
 def CloseMysqlConn():
@@ -48,21 +47,21 @@ def main(argv):
    #print ("Argument List:", str(sys.argv))
 
    if len(sys.argv) <= 1:
-      logging.info ("USAGE : rdbsh.py -u <user> -p <password> -e <exising db name> -c <create db name> -f <filesystem path>")
+      logging.error ("USAGE : rdbsh.py -u <user> -p <password> -e <exising db name> -c <create db name> -f <filesystem path>")
       sys.exit()
 
    try:
       opts, args = getopt.gnu_getopt(argv, "hu:p:i:e:c:f:", ["help"])
    except getopt.GetoptError:
-      logging.debug ("ERROR : USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
+      logging.error ("ERROR : USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
       sys.exit(2)
 
-   logging.info("Opts : %s", opts)
-   logging.info("Args : %s", args)   
+   logging.debug("Opts : %s", opts)
+   logging.debug("Args : %s", args)   
       
    for opt, arg in opts:
       if opt in ("-h", "--help"):
-         logging.debug ("USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
+         logging.error ("USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
          sys.exit()
       elif opt == '-u':
          uname = arg
@@ -86,15 +85,17 @@ def main(argv):
    logging.debug ("DB File Create Path : %s", dbcreatefilepath)
 
    if (uname == "" or pwd == "" or hostip == ""):
-      logging.debug ("USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
+      logging.error ("USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
       sys.exit(2)
-
-   if (createdbname == "" and existdbname == ""):
-      logging.info("Database parameter is missing")
+   elif (createdbname == "" and existdbname == ""):
+      logging.error("Database parameter is missing")
       sys.exit(2)
+   elif (createdbname != "" and dbcreatefilepath == ""):
+      logging.error("Filesystem path parameter is missing")
+      sys.exit(2)   
 
    # open mysql connection
-   if (OpenMysqlConn(uname, pwd, hostip, existdbname) != 0):
+   if (OpenMysqlConn(uname, pwd, hostip) != 0):
       sys.exit(2)
 
    # create db if required
@@ -112,10 +113,10 @@ def main(argv):
          sys.exit(2)     
 
    # test database
-   logging.info("\n\nDISPLAYING ALL TABLES IN DB")
+   logging.debug("\n\nDISPLAYING ALL TABLES IN DB")
    cursor.execute("SHOW TABLES")
    for x in cursor:
-      print(x)
+      logging.debug(x)
 
    # Close sql connection
    CloseMysqlConn()
