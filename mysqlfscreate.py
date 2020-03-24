@@ -47,54 +47,55 @@ TABLES[TABLES_IN_DB[2]] = (
    ")  DEFAULT CHARSET=binary"
    )
 
-cnx = mysql.connector.connect(user='root', password='root',
-                              host='127.0.0.1')
-cursor = cnx.cursor();
-
-def create_database(cursor):
-    try:
-        cursor.execute(
-            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(DB_NAME))
-    except mysql.connector.Error as err:
-        print("Failed creating database: {}".format(err))
-        exit(1)
-
-try:
-    cursor.execute("USE {}".format(DB_NAME))
-except mysql.connector.Error as err:
-    print("Database {} does not exists.".format(DB_NAME))
-    if err.errno == errorcode.ER_BAD_DB_ERROR:
-        create_database(cursor)
-        print("Database {} created successfully.".format(DB_NAME))
-        cnx.database = DB_NAME
-    else:
-        print(err)
-        exit(1)
-
-# Drop tables
-cursor.execute(DROP_TREE);
-cursor.execute(DROP_FATTRB);
-cursor.execute(DROP_FDATA);
-
-for table_name in TABLES:
-    table_description = TABLES[table_name]
-    try:
-        print("Creating table {}: ".format(table_name), end='')
-        cursor.execute(table_description)
-    except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-            print("already exists.")
-        else:
-            print(err.msg)
-    else:
-        print("OK")
-
 add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
 add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
 #add_fdata_entry = ("INSERT INTO fdata (fid, seq, data) VALUES (%s, %s, %s)")
 
-fileid = 0
+fileid = 0      
+
+def open_database(cursor, dbname):
+    try:
+        cursor.execute("USE {}".format(dbname))
+    except mysql.connector.Error as err:
+        print("Failed opening database: {}".format(err))
+        return 1
+
+def create_database(cnx, cursor, dbname, fspath):
+    try:
+        cursor.execute(
+            "DROP DATABASE IF EXISTS {}".format(dbname))
+    except mysql.connector.Error as err:
+        print("Failed dropping database :", dbname)
+        return 1
+    else:
+        print("Creating database : {}".format(dbname))
+
+    try:
+        cursor.execute(
+            "CREATE DATABASE {} DEFAULT CHARACTER SET 'utf8'".format(dbname))
+    except mysql.connector.Error as err:
+        print("Failed creating database: {}".format(err))
+        return 1
+
+    # Open database
+    if (open_database(cursor, dbname) == 1):
+        return 1
+
+    # Create tables
+    for table_name in TABLES:
+        table_description = TABLES[table_name]
+        try:
+            cursor.execute(table_description)
+        except mysql.connector.Error as err:
+            print(err.msg)
+        else:
+            print("Creating table : {}".format(table_name))   
+
+    # populate data 
+    scan_directories(cursor, fspath, None)
+    # There will be no update after this point, hence commit
+    cnx.commit()
 
 """
 def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
@@ -106,7 +107,6 @@ def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
            yield data
         except:
            return None
-
 def file_data(fid, fentry):
        seq = 0
        file_to_read = open(fentry, 'rb')
@@ -118,22 +118,21 @@ def file_data(fid, fentry):
            cursor.execute(add_fdata_entry, fdata)
            seq = seq + 1
        file_to_read.close()
-
 """
-def file_data(fid, fentry):
+def file_data(cursor, fid, fentry):
     try:
        file_to_read = open(fentry, 'rb')
        file_content = file_to_read.read()
        file_to_read.close()
     except:
-       print('Cannot read '+str(entry.name))
+       print('Cannot read '+str(fentry.name))
        file_content = None
     fdata = []
     fdata.append(fid)
     fdata.append(file_content)
     cursor.execute(add_fdata_entry, fdata)
 
-def f_attributes(fid, attr):
+def f_attributes(cursor, fid, attr):
     if not attr is None:
        fattrb = []
        fattrb.append(fid)
@@ -145,7 +144,7 @@ def f_attributes(fid, attr):
        fattrb.append(attr.st_size)
        cursor.execute(add_fattrb_entry, fattrb)
 
-def scan_directories(path, parentid):
+def scan_directories(cursor, path, parentid):
     global fileid
     with os.scandir(path) as dir_entries:
         for entry in dir_entries:
@@ -159,7 +158,7 @@ def scan_directories(path, parentid):
             except:
                 pass
             if info is not None:
-                f_attributes(fileid, info)
+                f_attributes(cursor, fileid, info)
             
                 if os.path.isdir(entry):  
                    tree_entry.append(fileid)
@@ -167,18 +166,13 @@ def scan_directories(path, parentid):
                    tree_entry.append(entry.name) 
                    cursor.execute(add_tree_entry, tree_entry)
                    parentid1 = fileid
-                   fileid = scan_directories(entry, parentid1)  
+                   fileid = scan_directories(cursor, entry, parentid1)  
                 else:  
                    tree_entry.append(fileid)
                    tree_entry.append(parentid)
                    tree_entry.append(entry.name)
                    cursor.execute(add_tree_entry, tree_entry) 
-                   file_data(fileid, entry)
+                   file_data(cursor, fileid, entry)
             else:
                 fileid = fileid - 1
     return fileid
-
-scan_directories('.', None)
-cnx.commit()
-cursor.close()
-cnx.close()
