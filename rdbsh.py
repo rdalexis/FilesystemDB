@@ -4,6 +4,9 @@ import os
 import mysql.connector
 from mysql.connector import errorcode
 
+import mysqlglobals as gl
+from cd import cd_main
+
 from mysqlfscreate import create_database, open_database
 
 # Import logger module
@@ -15,24 +18,24 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 #from mysqlfscreate import CreateFSDatabase
 
 # Globals
+# CMDS = ['cd', 'ls', 'find', 'grep'] 
+
 
 # mysql connection
 def OpenMysqlConn(uname, pwd, hostip):
-   global cnx, cursor
-
    try: 
-      cnx = mysql.connector.connect(user=uname, password=pwd, host=hostip)
+      gl.cnx = mysql.connector.connect(user=uname, password=pwd, host=hostip)
    except mysql.connector.Error as err:
       logging.error(str(err))
       return 1
    else:
-      cursor = cnx.cursor()
+      gl.cursor = gl.cnx.cursor()
       return 0
 
 # mysql close connection
 def CloseMysqlConn():
-   cursor.close()
-   cnx.close()
+   gl.cursor.close()
+   gl.cnx.close()
 
 def main(argv):
    uname = ''
@@ -41,7 +44,9 @@ def main(argv):
    createdbname = ''
    dbcreatefilepath = ''
    existdbname = ''
-   dbname = ''  
+   dbname = ''
+
+   gl.globalsInit()
    
    #print ("Number of arguments:", len(sys.argv), "arguments.")
    #print ("Argument List:", str(sys.argv))
@@ -100,7 +105,7 @@ def main(argv):
 
    # create db if required
    if (createdbname != ""):
-      if (create_database(cnx, cursor, createdbname, dbcreatefilepath)):
+      if (create_database(gl.cnx, gl.cursor, createdbname, dbcreatefilepath)):
          CloseMysqlConn()
          sys.exit(2)
       else:
@@ -108,15 +113,39 @@ def main(argv):
    else:
       dbname = existdbname      
       # open database
-      if (open_database(cursor, dbname)):
+      if (open_database(gl.cursor, dbname)):
          CloseMysqlConn()
          sys.exit(2)     
 
    # test database
    logging.debug("\n\nDISPLAYING ALL TABLES IN DB")
-   cursor.execute("SHOW TABLES")
-   for x in cursor:
+   gl.cursor.execute("SHOW TABLES")
+   gl.qryrecords = gl.cursor
+   for x in gl.qryrecords:
       logging.debug(x)
+
+   # display prompt
+
+   while (True):
+      ui = input("mysql@mysqlserver : ")      
+      global cmdparam
+      cmdparam = ui.split()
+      if (cmdparam[0] == 'cd'):
+         print("cd Command")
+         cd_main()
+      elif(cmdparam[0] == 'ls'):
+         print("ls command")
+      elif(cmdparam[0] == 'find'):
+         print("find Command")
+      elif(cmdparam[0] == 'grep'):
+         print("grep command")
+      elif(cmdparam[0] == 'exit'):
+         print("Terminating mysqlfs shell")
+         break
+      else:
+         print("Command not found")
+
+   # Do all necessary cleanups
 
    # Close sql connection
    CloseMysqlConn()
