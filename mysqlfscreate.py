@@ -52,7 +52,7 @@ add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
 #add_fdata_entry = ("INSERT INTO fdata (fid, seq, data) VALUES (%s, %s, %s)")
 
-fileid = 0      
+fileid = 0
 
 def open_database(cursor, dbname):
     try:
@@ -93,7 +93,7 @@ def create_database(cnx, cursor, dbname, fspath):
             print("Creating table : {}".format(table_name))   
 
     # populate data 
-    scan_directories(cursor, fspath, None)
+    scan_directories(cursor, fspath, 0)
     # There will be no update after this point, hence commit
     cnx.commit()
 
