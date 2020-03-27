@@ -38,7 +38,6 @@ TABLES[TABLES_IN_DB[1]] = (
    ") DEFAULT CHARSET=binary"
    )
 
-"""`seq` int unsigned NOT NULL,"""
 TABLES[TABLES_IN_DB[2]] = (
    "CREATE TABLE `fdata` ("
    "`fid` bigint(20) NOT NULL,"
@@ -50,7 +49,6 @@ TABLES[TABLES_IN_DB[2]] = (
 add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
 add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
-#add_fdata_entry = ("INSERT INTO fdata (fid, seq, data) VALUES (%s, %s, %s)")
 
 fileid = 0
 
@@ -119,11 +117,12 @@ def file_data(fid, fentry):
            seq = seq + 1
        file_to_read.close()
 """
+
 def file_data(cursor, fid, fentry):
     try:
-       file_to_read = open(fentry, 'rb')
-       file_content = file_to_read.read()
-       file_to_read.close()
+       file_handle = open(fentry, 'rb')
+       file_content = file_handle.read()
+       file_handle.close()
     except:
        print('Cannot read '+str(fentry.name))
        file_content = None
@@ -157,22 +156,22 @@ def scan_directories(cursor, path, parentid):
                 info = entry.stat()
             except:
                 pass
+            
             if info is not None:
                 f_attributes(cursor, fileid, info)
-            
+                tree_entry.append(fileid)
+                tree_entry.append(parentid)
+                tree_entry.append(entry.name) 
+                cursor.execute(add_tree_entry, tree_entry)
                 if os.path.isdir(entry):  
-                   tree_entry.append(fileid)
-                   tree_entry.append(parentid)
-                   tree_entry.append(entry.name) 
-                   cursor.execute(add_tree_entry, tree_entry)
                    parentid1 = fileid
                    fileid = scan_directories(cursor, entry, parentid1)  
-                else:  
-                   tree_entry.append(fileid)
-                   tree_entry.append(parentid)
-                   tree_entry.append(entry.name)
-                   cursor.execute(add_tree_entry, tree_entry) 
+                elif os.path.isfile(entry):  
                    file_data(cursor, fileid, entry)
+                elif os.path.islink(entry):
+                   print(str(entry.name)+' link')
+                else:
+                   dummy = None    
             else:
                 fileid = fileid - 1
     return fileid

@@ -6,6 +6,7 @@ from mysql.connector import errorcode
 
 import mysqlglobals as gl
 from cd import cd_main
+from find import find_main
 
 from mysqlfscreate import create_database, open_database
 
@@ -29,7 +30,7 @@ def OpenMysqlConn(uname, pwd, hostip):
       logging.error(str(err))
       return 1
    else:
-      gl.cursor = gl.cnx.cursor()
+      gl.cursor = gl.cnx.cursor(buffered=True)
       return 0
 
 # mysql close connection
@@ -103,6 +104,18 @@ def main(argv):
    if (OpenMysqlConn(uname, pwd, hostip) != 0):
       sys.exit(2)
 
+   # set the value of max_allowed_packet to 1 GB(max_limit) and reopen mysql session
+   gl.cursor.execute("SET GLOBAL max_allowed_packet=1073741824")
+   CloseMysqlConn()
+   if (OpenMysqlConn(uname, pwd, hostip) != 0):
+      sys.exit(2)
+
+   # check if max_allowed_packet is set or not
+   gl.cursor.execute("SHOW VARIABLES LIKE 'max_allowed_packet'")
+   gl.qryrecords = gl.cursor
+   for x in gl.qryrecords:
+      logging.debug(x)
+
    # create db if required
    if (createdbname != ""):
       if (create_database(gl.cnx, gl.cursor, createdbname, dbcreatefilepath)):
@@ -117,26 +130,25 @@ def main(argv):
          CloseMysqlConn()
          sys.exit(2)     
 
-   # test database
-   logging.debug("\n\nDISPLAYING ALL TABLES IN DB")
-   gl.cursor.execute("SHOW TABLES")
-   gl.qryrecords = gl.cursor
-   for x in gl.qryrecords:
-      logging.debug(x)
+   # initialize terminal path
+
+   # get ~ path /home/$user
+   # TODO : Set fid to /home/$usr
+   gl.terminalpath = "~"
 
    # display prompt
-
-   while (True):
-      ui = input("mysql@mysqlserver : ")      
-      global cmdparam
+   while True:
+      ui = input("mysql@mysqlserver:" + gl.terminalpath + "$ ")
       cmdparam = ui.split()
       if (cmdparam[0] == 'cd'):
          print("cd Command")
-         cd_main()
+         cd_main(cmdparam)
       elif(cmdparam[0] == 'ls'):
          print("ls command")
       elif(cmdparam[0] == 'find'):
          print("find Command")
+         if len(cmdparam) > 2:
+            find_main(cmdparam[1], cmdparam[2])
       elif(cmdparam[0] == 'grep'):
          print("grep command")
       elif(cmdparam[0] == 'exit'):
