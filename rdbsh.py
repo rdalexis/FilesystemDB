@@ -135,6 +135,7 @@ def main(argv):
    # get ~ path /home/$user
    # TODO : Set fid to /home/$usr
    gl.terminalpath = "~"
+   gl.current_fid = gl.fiduser
 
    # display prompt
    while True:

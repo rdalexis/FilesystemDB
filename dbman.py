@@ -78,16 +78,25 @@ def get_parentfid(childfid):
     else:
         return -1
 
-def get_fid_from_dirpath(currfid, dirpath):
+def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck, isreturnmode):
     dirtraversed = []
     pathsplit = dirpath.split('/')
+    splitsize = len(pathsplit)
+    mode = 0
 
-    for i in range(len(pathsplit)):
+    if splitsize > 1:
+        if (isdirectorycheck == True and pathsplit[splitsize - 1] == ""):
+            pathsplit.pop()
+            splitsize = splitsize - 1
+        elif (isdirectorycheck == False and pathsplit[splitsize - 1] == ""):
+            return -1
+
+    for i in range(splitsize):
         # Check for / at begin and end
         if pathsplit[i] == "":
             if i == 0:
                 currfid = gl.fidroot
-            elif i != len(pathsplit):
+            else:
                 currfid = -1
         elif pathsplit[i] == "~":
             if i == 0:
@@ -103,11 +112,17 @@ def get_fid_from_dirpath(currfid, dirpath):
                 currfid = get_parentfid(currfid)
             else:
                 currfid = dirtraversed.pop()
-        elif pathsplit[i] != "" :
+        else:
             dirtraversed.append(currfid)
-            currfid = get_childfid(currfid, pathsplit[i], True, False)
+            if(i == splitsize - 1):
+                currfid, mode = get_childfid(currfid, pathsplit[i], isdirectorycheck, True)
+            else:
+                currfid = get_childfid(currfid, pathsplit[i], True, False)
     
         if currfid == -1:
             break
 
-    return currfid
+    if isreturnmode:
+        return currfid, mode
+    else:
+        return currfid

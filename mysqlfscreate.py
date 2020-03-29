@@ -96,10 +96,23 @@ def create_database(cnx, cursor, dbname, fspath):
         except mysql.connector.Error as err:
             print(err.msg)
         else:
-            print("Creating table : {}".format(table_name))   
+            print("Creating table : {}".format(table_name))
+
+    # adding root, just for testing, TODO make it proper
+    try:    
+        cursor.execute(
+            "INSERT tree(fid, parentid, name) VALUES(0,0,'/')")
+        cursor.execute(
+            "UPDATE tree SET fid = 0 WHERE name = '/'")        
+    except mysql.connector.Error as err:
+        print("Failed inserting value for root : {}".format(err))
+        return 1            
 
     # populate data 
     scan_directories(cursor, fspath, 0)
+
+    # TODO creating tree entry for ~, etc.,
+
     # There will be no update after this point, hence commit
     cnx.commit()
 

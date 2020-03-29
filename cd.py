@@ -4,6 +4,8 @@ import dbman
 
 def update_terminal_path(newpath):
     pathsplit = newpath.split('/')
+    if gl.terminalpath == '/':
+        gl.terminalpath = ""
     #print(pathsplit)
     for i in range(len(pathsplit)):
         # Check for / at begin and end
@@ -20,46 +22,32 @@ def update_terminal_path(newpath):
 
 def cd_main(cmdparam):
 
-    # print (dbman.get_childfid(0, 'a.sql', False, False))
-    # print (dbman.get_childfid(0, 'tmplnk', False, False))
-    # print (dbman.get_childfid(0, 'tmplnk', False, True))
-    # print (dbman.get_childfid(0, 'b.sql', False, True))
-
-    # print(dbman.get_parentfid(0))
-    # print(dbman.get_parentfid(14))
-    # print(dbman.get_parentfid(1))
-    # return
-
     if (len(cmdparam) > 2):
         print("bash: cd: too many arguments")
         return
     elif (len(cmdparam) == 1):
         gl.terminalpath = "~"
         # TODO : Set fid to /home/$usr
-        gl.current_fid = 0
+        gl.current_fid = gl.fiduser
         return
 
-    print("CD Path : ", cmdparam[1])
+    print("CD traverse path : ", cmdparam[1])
 
-    if (cmdparam[1] == "/"):
-        gl.terminalpath = "/"
-        gl.current_fid = 0
-        return
-    elif (cmdparam[1] == "."):
-        return
-
-    # Args: IN current fid, IN path, OUT updated fid, OUT updated path string 
-    cd_args = [gl.current_fid, cmdparam[1], 0, 0]
-    result_args = dbman.call_procedure_argresults('Unix_GetFileIdFromPath', cd_args)
-    print(result_args)
-    if (result_args != 1):
-        if (result_args[2] != -1):
-            gl.current_fid = result_args[2]
-            update_terminal_path(cmdparam[1])
-        else:
-            print("bash: cd: " + cmdparam[1] + ": No such file or directory")
+    newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
+    if newfid != -1:
+        print("fid : ", newfid, "for ", cmdparam[1])
+        update_terminal_path(cmdparam[1])
+        gl.current_fid = newfid
+    else:
+        print("bash: cd: ", cmdparam[1] ,": No such file or directory")
 
     return
+
+
+
+
+
+
 
 # print (dbman.get_childfid(0, 'a.sql', False))
 # print (dbman.get_childfid(0, 'b.sql', False))
