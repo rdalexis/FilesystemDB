@@ -20,6 +20,16 @@ def update_terminal_path(newpath):
 
 def cd_main(cmdparam):
 
+    # print (dbman.get_childfid(0, 'a.sql', False, False))
+    # print (dbman.get_childfid(0, 'tmplnk', False, False))
+    # print (dbman.get_childfid(0, 'tmplnk', False, True))
+    # print (dbman.get_childfid(0, 'b.sql', False, True))
+
+    # print(dbman.get_parentfid(0))
+    # print(dbman.get_parentfid(14))
+    # print(dbman.get_parentfid(1))
+    # return
+
     if (len(cmdparam) > 2):
         print("bash: cd: too many arguments")
         return
@@ -50,3 +60,10 @@ def cd_main(cmdparam):
             print("bash: cd: " + cmdparam[1] + ": No such file or directory")
 
     return
+
+# print (dbman.get_childfid(0, 'a.sql', False))
+# print (dbman.get_childfid(0, 'b.sql', False))
+# print(dbman.get_parentfid(0))
+# print(dbman.get_parentfid(14))
+# print(dbman.get_parentfid(1))
+# return

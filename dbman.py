@@ -46,12 +46,35 @@ def call_procedure_argresults(sp_name, sp_args):
         print("Error : {}".format(err))
         return 1
 
-def get_childfid(parentfid, childdirname, isdirectory):
+def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnmode):
+    qry = "SELECT T.fid, F.mode, L.tfid FROM (SELECT fid FROM tree WHERE parentid = "\
+        +str(parentfid)+" AND name = '"+childdirname+"') T INNER JOIN fattrb F "\
+            "ON T.fid = F.fid LEFT JOIN link L on T.fid = L.sfid"
+    if query_execute(qry) == 0:
+        result = query_fetchresult_one()
+        if (len(result) != 0):
+            if (isdirectorycheck == True) and ((16384 & result[1]) != 16384):
+                if isreturnmode == True: return -1, 0 
+                else: return -1
+            elif result[2] != None:
+                if isreturnmode == True: return result[2], result[1] 
+                else: return result[2]
+            else:
+                if isreturnmode == True: return result[0], result[1] 
+                else: return result[0]
+        else:
+            if isreturnmode == True: return -1, 0 
+            else: return -1
 
 def get_parentfid(childfid):
-    qry = "SELECT parentid FROM tree WHERE fid ="+str(childfid)
+    qry = "SELECT parentid FROM tree WHERE fid = "+str(childfid)
+    print(qry)
     if query_execute(qry) == 0:
-        return query_fetchresult_one()[0]
+        result = query_fetchresult_one()
+        if (len(result) != 0):
+            return result[0]
+        else:
+            return -1
     else:
         return -1
 
@@ -59,14 +82,13 @@ def get_fid_from_dirpath(currfid, dirpath):
     dirtraversed = []
     pathsplit = dirpath.split('/')
 
-    for i in range(len(dirlist)):
+    for i in range(len(pathsplit)):
         # Check for / at begin and end
         if pathsplit[i] == "":
             if i == 0:
                 currfid = gl.fidroot
-            else
+            elif i != len(pathsplit):
                 currfid = -1
-                break
         elif pathsplit[i] == "~":
             if i == 0:
                 currfid = gl.fidroot
@@ -76,7 +98,6 @@ def get_fid_from_dirpath(currfid, dirpath):
                     currfid = gl.fiduser
             else:
                 currfid = -1
-                break
         elif pathsplit[i] == "..":
             if len(dirtraversed) == 0:
                 currfid = get_parentfid(currfid)
@@ -84,9 +105,9 @@ def get_fid_from_dirpath(currfid, dirpath):
                 currfid = dirtraversed.pop()
         elif pathsplit[i] != "" :
             dirtraversed.append(currfid)
-            currfid = get_childfid(currfid, pathsplit[i], True)
+            currfid = get_childfid(currfid, pathsplit[i], True, False)
     
-        if currfid == -1
+        if currfid == -1:
             break
 
     return currfid
