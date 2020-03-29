@@ -2,6 +2,22 @@ import os
 import mysqlglobals as gl
 import dbman
 
+def update_terminal_path(newpath):
+    pathsplit = newpath.split('/')
+    #print(pathsplit)
+    for i in range(len(pathsplit)):
+        # Check for / at begin and end
+        if pathsplit[i] == "" and i == 0:
+            gl.terminalpath = ""
+        elif pathsplit[i] == "~":
+            gl.terminalpath = "~"
+        elif pathsplit[i] == "..":
+            gl.terminalpath = gl.terminalpath.rsplit("/", 1)[0]
+        else:
+            gl.terminalpath = gl.terminalpath+"/"+pathsplit[i]
+
+    #print(gl.terminalpath)
+
 def cd_main(cmdparam):
 
     if (len(cmdparam) > 2):
@@ -29,7 +45,7 @@ def cd_main(cmdparam):
     if (result_args != 1):
         if (result_args[2] != -1):
             gl.current_fid = result_args[2]
-            gl.terminalpath = result_args[3]
+            update_terminal_path(cmdparam[1])
         else:
             print("bash: cd: " + cmdparam[1] + ": No such file or directory")
 

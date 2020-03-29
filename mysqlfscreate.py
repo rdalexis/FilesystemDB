@@ -7,7 +7,7 @@ from mysql.connector import errorcode
 # Default size is 64MB. So, setting 50MB
 DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['tree', 'fattrb', 'fdata']
+TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
@@ -16,8 +16,8 @@ DROP_FDATA = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[2]
 TABLES = {}
 TABLES[TABLES_IN_DB[0]] = (
     "CREATE TABLE `tree` ("
-    "`fid` int(10) unsigned NOT NULL auto_increment,"
-    "`parentid` int(10) unsigned default NULL,"
+    "`fid` bigint(20) unsigned NOT NULL auto_increment,"
+    "`parentid` bigint(20) unsigned default NULL,"
     "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
     "UNIQUE KEY `name` (`name`,`parentid`),"
     "KEY `fid` (`fid`),"
@@ -43,6 +43,14 @@ TABLES[TABLES_IN_DB[2]] = (
    "`fid` bigint(20) NOT NULL,"
    "`data` longblob,"
    "PRIMARY KEY  (`fid`)"
+   ")  DEFAULT CHARSET=binary"
+   )
+
+TABLES[TABLES_IN_DB[3]] = (
+   "CREATE TABLE `link` ("
+   "`sfid` bigint(20) NOT NULL,"
+   "`tfid` bigint(20) NOT NULL,"
+   "PRIMARY KEY  (`sfid`)"
    ")  DEFAULT CHARSET=binary"
    )
 
