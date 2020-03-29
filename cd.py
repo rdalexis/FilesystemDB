@@ -4,8 +4,7 @@ import dbman
 
 def update_terminal_path(newpath):
     pathsplit = newpath.split('/')
-    if gl.terminalpath == '/':
-        gl.terminalpath = ""
+
     #print(pathsplit)
     for i in range(len(pathsplit)):
         # Check for / at begin and end
@@ -14,10 +13,17 @@ def update_terminal_path(newpath):
         elif pathsplit[i] == "~":
             gl.terminalpath = "~"
         elif pathsplit[i] == "..":
-            gl.terminalpath = gl.terminalpath.rsplit("/", 1)[0]
+            if gl.terminalpath == "~":
+                gl.terminalpath = "/home"
+            else:
+                gl.terminalpath = gl.terminalpath.rsplit("/", 1)[0]
         else:
-            gl.terminalpath = gl.terminalpath+"/"+pathsplit[i]
+            if gl.terminalpath == "/": 
+                gl.terminalpath = "/"+pathsplit[i]
+            else:
+                gl.terminalpath = gl.terminalpath+"/"+pathsplit[i]
 
+    if gl.terminalpath == "": gl.terminalpath = "/"
     #print(gl.terminalpath)
 
 def cd_main(cmdparam):
@@ -31,11 +37,11 @@ def cd_main(cmdparam):
         gl.current_fid = gl.fiduser
         return
 
-    print("CD traverse path : ", cmdparam[1])
+    #print("CD traverse path : ", cmdparam[1])
 
     newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
     if newfid != -1:
-        print("fid : ", newfid, "for ", cmdparam[1])
+        #print("fid : ", newfid, "for ", cmdparam[1])
         update_terminal_path(cmdparam[1])
         gl.current_fid = newfid
     else:

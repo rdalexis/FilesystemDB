@@ -142,7 +142,7 @@ def main(argv):
       ui = input("mysql@mysqlserver:" + gl.terminalpath + "$ ")
       cmdparam = ui.split()
       if (cmdparam[0] == 'cd'):
-         print("cd Command")
+         #print("cd Command")
          cd_main(cmdparam)
       elif(cmdparam[0] == 'ls'):
          print("ls command")

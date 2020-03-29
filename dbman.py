@@ -68,7 +68,7 @@ def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnmode):
 
 def get_parentfid(childfid):
     qry = "SELECT parentid FROM tree WHERE fid = "+str(childfid)
-    print(qry)
+    #print(qry)
     if query_execute(qry) == 0:
         result = query_fetchresult_one()
         if (len(result) != 0):
