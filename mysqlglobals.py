@@ -10,3 +10,13 @@ def globalsInit():
     global current_fid, current_fldr_contents
     current_fid = 0
     current_fldr_contents = []
+
+    # fids permanent
+    global fidroot, fidhome, fiduser
+    fidroot = 0
+    fidhome = 2    
+    fiduser = 3 # parent should be home dir
+
+    # terminal path string
+    global terminalpath
+    terminalpath = ""

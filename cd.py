@@ -2,10 +2,62 @@ import os
 import mysqlglobals as gl
 import dbman
 
-def cd_main():    
-    cd_query = "SELECT name FROM tree WHERE parentid = " + str(gl.current_fid)
-    print(cd_query)
-    output = dbman.query_execute(cd_query)
-    for row in output:
-        print("file/folder name = ", row[0])
+def update_terminal_path(newpath):
+    pathsplit = newpath.split('/')
 
+    #print(pathsplit)
+    for i in range(len(pathsplit)):
+        # Check for / at begin and end
+        if pathsplit[i] == "" and i == 0:
+            gl.terminalpath = ""
+        elif pathsplit[i] == "~":
+            gl.terminalpath = "~"
+        elif pathsplit[i] == "..":
+            if gl.terminalpath == "~":
+                gl.terminalpath = "/home"
+            else:
+                gl.terminalpath = gl.terminalpath.rsplit("/", 1)[0]
+        else:
+            if gl.terminalpath == "/": 
+                gl.terminalpath = "/"+pathsplit[i]
+            else:
+                gl.terminalpath = gl.terminalpath+"/"+pathsplit[i]
+
+    if gl.terminalpath == "": gl.terminalpath = "/"
+    #print(gl.terminalpath)
+
+def cd_main(cmdparam):
+
+    if (len(cmdparam) > 2):
+        print("bash: cd: too many arguments")
+        return
+    elif (len(cmdparam) == 1):
+        gl.terminalpath = "~"
+        # TODO : Set fid to /home/$usr
+        gl.current_fid = gl.fiduser
+        return
+
+    #print("CD traverse path : ", cmdparam[1])
+
+    newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
+    if newfid != -1:
+        #print("fid : ", newfid, "for ", cmdparam[1])
+        update_terminal_path(cmdparam[1])
+        gl.current_fid = newfid
+    else:
+        print("bash: cd: ", cmdparam[1] ,": No such file or directory")
+
+    return
+
+
+
+
+
+
+
+# print (dbman.get_childfid(0, 'a.sql', False))
+# print (dbman.get_childfid(0, 'b.sql', False))
+# print(dbman.get_parentfid(0))
+# print(dbman.get_parentfid(14))
+# print(dbman.get_parentfid(1))
+# return

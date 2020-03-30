@@ -30,7 +30,7 @@ def OpenMysqlConn(uname, pwd, hostip):
       logging.error(str(err))
       return 1
    else:
-      gl.cursor = gl.cnx.cursor()
+      gl.cursor = gl.cnx.cursor(buffered=True)
       return 0
 
 # mysql close connection
@@ -130,21 +130,20 @@ def main(argv):
          CloseMysqlConn()
          sys.exit(2)     
 
-   # test database
-   logging.debug("\n\nDISPLAYING ALL TABLES IN DB")
-   gl.cursor.execute("SHOW TABLES")
-   gl.qryrecords = gl.cursor
-   for x in gl.qryrecords:
-      logging.debug(x)
+   # initialize terminal path
+
+   # get ~ path /home/$user
+   # TODO : Set fid to /home/$usr
+   gl.terminalpath = "~"
+   gl.current_fid = gl.fiduser
 
    # display prompt
    while True:
-      ui = input("mysql@mysqlserver : ")      
-      global cmdparam
+      ui = input("mysql@mysqlserver:" + gl.terminalpath + "$ ")
       cmdparam = ui.split()
       if (cmdparam[0] == 'cd'):
-         print("cd Command")
-         cd_main()
+         #print("cd Command")
+         cd_main(cmdparam)
       elif(cmdparam[0] == 'ls'):
          print("ls command")
       elif(cmdparam[0] == 'find'):
