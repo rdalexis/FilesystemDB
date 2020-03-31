@@ -14,8 +14,8 @@ def globalsInit():
     # fids permanent
     global fidroot, fidhome, fiduser
     fidroot = 0
-    fidhome = 2    
-    fiduser = 3 # parent should be home dir
+    fidhome = 0    
+    fiduser = 0 # parent should be home dir
 
     # terminal path string
     global terminalpath

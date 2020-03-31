@@ -41,11 +41,11 @@ def cd_main(cmdparam):
 
     newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
     if newfid != -1:
-        #print("fid : ", newfid, "for ", cmdparam[1])
+        # print("fid : ", newfid, "for ", cmdparam[1])
         update_terminal_path(cmdparam[1])
         gl.current_fid = newfid
     else:
-        print("bash: cd: ", cmdparam[1] ,": No such file or directory")
+        print("bash: cd:", cmdparam[1] ,": No such file or directory")
 
     return
 

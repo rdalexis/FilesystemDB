@@ -9,6 +9,7 @@ from cd import cd_main
 from find import find_main
 
 from mysqlfscreate import create_database, open_database
+import dbman
 
 # Import logger module
 import logging
@@ -37,6 +38,20 @@ def OpenMysqlConn(uname, pwd, hostip):
 def CloseMysqlConn():
    gl.cursor.close()
    gl.cnx.close()
+
+def TerminalInit():
+   # Get fid of root 
+   gl.fidroot = dbman.get_childfid(0, "/", True, False)
+   #print(gl.fidroot)
+
+   # get ~ path /home/$user
+   gl.fidhome = dbman.get_childfid(gl.fidroot, "home", True, False)
+   # TODO : Set fid of user if more than one user
+   gl.fiduser = dbman.get_childfid(gl.fidhome, "%", True, False)
+   #print(gl.fidhome, gl.fiduser)
+   
+   gl.terminalpath = "~"
+   gl.current_fid = gl.fiduser
 
 def main(argv):
    uname = ''
@@ -131,16 +146,13 @@ def main(argv):
          sys.exit(2)     
 
    # initialize terminal path
-
-   # get ~ path /home/$user
-   # TODO : Set fid to /home/$usr
-   gl.terminalpath = "~"
-   gl.current_fid = gl.fiduser
+   TerminalInit()
 
    # display prompt
    while True:
       ui = input("mysql@mysqlserver:" + gl.terminalpath + "$ ")
       cmdparam = ui.split()
+      if (len(cmdparam) == 0): continue
       if (cmdparam[0] == 'cd'):
          #print("cd Command")
          cd_main(cmdparam)
