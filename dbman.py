@@ -81,7 +81,7 @@ def get_parentfid(childfid):
     else:
         return -1
 
-def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck, isreturnmode):
+def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmode = False):
     dirtraversed = []
     pathsplit = dirpath.split('/')
     splitsize = len(pathsplit)
@@ -115,6 +115,8 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck, isreturnmode):
                 currfid = get_parentfid(currfid)
             else:
                 currfid = dirtraversed.pop()
+        elif pathsplit[i] == ".":
+            continue
         else:
             dirtraversed.append(currfid)
             if(i == splitsize - 1):
