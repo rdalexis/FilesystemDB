@@ -8,8 +8,11 @@ def update_terminal_path(newpath):
     #print(pathsplit)
     for i in range(len(pathsplit)):
         # Check for / at begin and end
-        if pathsplit[i] == "" and i == 0:
-            gl.terminalpath = ""
+        if pathsplit[i] == "":
+            if i == 0:
+                gl.terminalpath = ""
+            else:
+                continue
         elif pathsplit[i] == "~":
             gl.terminalpath = "~"
         elif pathsplit[i] == "..":
@@ -17,6 +20,8 @@ def update_terminal_path(newpath):
                 gl.terminalpath = "/home"
             else:
                 gl.terminalpath = gl.terminalpath.rsplit("/", 1)[0]
+        elif pathsplit[i] == ".":
+            continue
         else:
             if gl.terminalpath == "/": 
                 gl.terminalpath = "/"+pathsplit[i]
@@ -41,23 +46,10 @@ def cd_main(cmdparam):
 
     newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
     if newfid != -1:
-        #print("fid : ", newfid, "for ", cmdparam[1])
+        # print("fid : ", newfid, "for ", cmdparam[1])
         update_terminal_path(cmdparam[1])
         gl.current_fid = newfid
     else:
-        print("bash: cd: ", cmdparam[1] ,": No such file or directory")
+        print("bash: cd:", cmdparam[1] ,": No such file or directory")
 
     return
-
-
-
-
-
-
-
-# print (dbman.get_childfid(0, 'a.sql', False))
-# print (dbman.get_childfid(0, 'b.sql', False))
-# print(dbman.get_parentfid(0))
-# print(dbman.get_parentfid(14))
-# print(dbman.get_parentfid(1))
-# return

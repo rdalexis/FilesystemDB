@@ -103,7 +103,10 @@ def create_database(cnx, cursor, dbname, fspath):
         cursor.execute(
             "INSERT tree(fid, parentid, name) VALUES(0,0,'/')")
         cursor.execute(
-            "UPDATE tree SET fid = 0 WHERE name = '/'")        
+            "UPDATE tree SET fid = 0 WHERE name = '/'")
+        cursor.execute(
+            "INSERT fattrb(fid, mode, uid, gid, nlink, mtime, size)"
+                " VALUES(0, 16877, 0, 0, 1, 0, 0)")            
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
         return 1            
