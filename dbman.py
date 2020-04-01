@@ -47,7 +47,8 @@ def call_procedure_argresults(sp_name, sp_args):
         return 1
 
 def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnmode):
-    qry = "SELECT T.fid, F.mode, L.tfid FROM (SELECT fid FROM tree WHERE parentid = "\
+    qry = "SELECT T.fid, F.mode, L.tfid, (SELECT mode from fattrb WHERE fid = L.tfid) "\
+        "FROM (SELECT fid FROM tree WHERE parentid = "\
         +str(parentfid)+" AND name LIKE '"+childdirname+"') T INNER JOIN fattrb F "\
             "ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
     if query_execute(qry) == 0:
@@ -55,14 +56,18 @@ def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnmode):
         # print(qry)
         # print("query output : ", result)
         if (len(result) != 0):
-            if (isdirectorycheck == True) and ((16384 & result[1]) != 16384):
+            # get mode
+            if result[2] == None: mode = result[1]
+            else: mode = result[3]
+
+            if (isdirectorycheck == True) and ((16384 & mode) != 16384):
                 if isreturnmode == True: return -1, 0 
                 else: return -1
             elif result[2] != None:
-                if isreturnmode == True: return result[2], result[1] 
+                if isreturnmode == True: return result[2], mode 
                 else: return result[2]
             else:
-                if isreturnmode == True: return result[0], result[1] 
+                if isreturnmode == True: return result[0], mode 
                 else: return result[0]
         else:
             if isreturnmode == True: return -1, 0 
@@ -85,14 +90,25 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
     dirtraversed = []
     pathsplit = dirpath.split('/')
     splitsize = len(pathsplit)
-    mode = 0
+    mode = 16384
+
+    #print(dirpath, pathsplit, splitsize)
 
     if splitsize > 1:
+        if splitsize == 2 and pathsplit[0] == "" and pathsplit[1] == "":
+            # handling for just path : /
+            if isreturnmode:
+                return gl.fidroot, mode
+            else:
+                return gl.fidroot
         if (isdirectorycheck == True and pathsplit[splitsize - 1] == ""):
             pathsplit.pop()
             splitsize = splitsize - 1
         elif (isdirectorycheck == False and pathsplit[splitsize - 1] == ""):
-            return -1
+            if isreturnmode:
+                return -1, 0
+            else:
+                return -1
 
     for i in range(splitsize):
         # Check for / at begin and end
@@ -125,6 +141,7 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
                 currfid = get_childfid(currfid, pathsplit[i], True, False)
     
         if currfid == -1:
+            mode = 0
             break
 
     if isreturnmode:

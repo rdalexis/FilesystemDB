@@ -6,6 +6,7 @@ from mysql.connector import errorcode
 
 import mysqlglobals as gl
 from cd import cd_main
+from ls import ls_main
 from find import find_main
 
 from mysqlfscreate import create_database, open_database
@@ -158,6 +159,20 @@ def main(argv):
          cd_main(cmdparam)
       elif(cmdparam[0] == 'ls'):
          print("ls command")
+         if len(cmdparam) == 1:
+            ls_main()
+         elif len(cmdparam) == 2:
+            if cmdparam[1] == '-l':
+               ls_main(True)
+            else:
+               ls_main(None, cmdparam[1])
+         elif len(cmdparam) == 3:
+            if cmdparam[1] == '-l':
+               ls_main(True, cmdparam[2])
+            else:
+               print("Please check the arguments given for ls command")
+         else:
+            print("Please check the arguments given for ls command")
       elif(cmdparam[0] == 'find'):
          print("find Command")
          if len(cmdparam) == 1:
@@ -171,7 +186,7 @@ def main(argv):
             if cmdparam[2] == '-name':
                find_main(cmdparam[1], cmdparam[3])
          else:
-            print("Please check the arguments given for find")
+            print("Please check the arguments given for find command")
       elif(cmdparam[0] == 'grep'):
          print("grep command")
       elif(cmdparam[0] == 'exit'):
