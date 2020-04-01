@@ -9,7 +9,6 @@ from cd import cd_main
 from find import find_main
 
 from mysqlfscreate import create_database, open_database
-import dbman
 
 # Import logger module
 import logging
@@ -38,20 +37,6 @@ def OpenMysqlConn(uname, pwd, hostip):
 def CloseMysqlConn():
    gl.cursor.close()
    gl.cnx.close()
-
-def TerminalInit():
-   # Get fid of root 
-   gl.fidroot = dbman.get_childfid(0, "/", True, False)
-   #print(gl.fidroot)
-
-   # get ~ path /home/$user
-   gl.fidhome = dbman.get_childfid(gl.fidroot, "home", True, False)
-   # TODO : Set fid of user if more than one user
-   gl.fiduser = dbman.get_childfid(gl.fidhome, "%", True, False)
-   #print(gl.fidhome, gl.fiduser)
-   
-   gl.terminalpath = "~"
-   gl.current_fid = gl.fiduser
 
 def main(argv):
    uname = ''
@@ -146,13 +131,16 @@ def main(argv):
          sys.exit(2)     
 
    # initialize terminal path
-   TerminalInit()
+
+   # get ~ path /home/$user
+   # TODO : Set fid to /home/$usr
+   gl.terminalpath = "~"
+   gl.current_fid = gl.fiduser
 
    # display prompt
    while True:
       ui = input("mysql@mysqlserver:" + gl.terminalpath + "$ ")
       cmdparam = ui.split()
-      if (len(cmdparam) == 0): continue
       if (cmdparam[0] == 'cd'):
          #print("cd Command")
          cd_main(cmdparam)
@@ -160,8 +148,18 @@ def main(argv):
          print("ls command")
       elif(cmdparam[0] == 'find'):
          print("find Command")
-         if len(cmdparam) > 2:
-            find_main(cmdparam[1], cmdparam[2])
+         if len(cmdparam) == 1:
+            find_main()
+         elif len(cmdparam) == 2:
+            find_main(cmdparam[1])
+         elif len(cmdparam) == 3:
+            if cmdparam[1] == '-name':
+               find_main(None, cmdparam[2])
+         elif len(cmdparam) == 4:
+            if cmdparam[2] == '-name':
+               find_main(cmdparam[1], cmdparam[3])
+         else:
+            print("Please check the arguments given for find")
       elif(cmdparam[0] == 'grep'):
          print("grep command")
       elif(cmdparam[0] == 'exit'):
