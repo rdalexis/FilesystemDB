@@ -148,3 +148,33 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
         return currfid, mode
     else:
         return currfid
+
+def get_folder_elements_with_attrib(fidfolder):
+    qry = "SELECT T.fid, mode, uid, gid, nlink, mtime, size, tfid"\
+        " FROM (SELECT fid FROM tree WHERE parentid = "+str(fidfolder)+") T"\
+        " INNER JOIN fattrb F ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
+    if query_execute(qry) == 0:
+        result = query_fetchresult_all()
+        # print(qry)
+        # print("query output : ", result)        
+        if (len(result) != 0):
+            return result
+        else:
+            return -1
+    else:
+        return -1    
+
+def get_file_with_attrib(fidfile):
+    qry = "SELECT F.fid, mode, uid, gid, nlink, mtime, size, tfid"\
+        " FROM fattrb F LEFT JOIN link L ON F.fid = L.sfid"\
+        " WHERE F.fid = "+str(fidfile)
+    if query_execute(qry) == 0:
+        result = query_fetchresult_one()
+        # print(qry)
+        # print("query output : ", result)        
+        if (len(result) != 0):
+            return result
+        else:
+            return -1
+    else:
+        return -1         
