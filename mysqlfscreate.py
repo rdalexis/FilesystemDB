@@ -54,6 +54,38 @@ TABLES[TABLES_IN_DB[3]] = (
    ")  DEFAULT CHARSET=binary"
    )
 
+GREP_SP = ( 
+"DELIMITER $$"
+"CREATE PROCEDURE grep("
+"    IN file_id BIGINT,"
+"    IN search_string VARCHAR(255)"
+")"
+"BEGIN"
+"    DECLARE NumOfLines INT DEFAULT 0;"
+"    DECLARE IterationCount INT DEFAULT 0;"
+"    DECLARE ExtractedData LONGBLOB;"
+"    DECLARE CurrentLine VARCHAR(255) DEFAULT '';"
+"    DECLARE StringPosition INT DEFAULT 0;"
+"    DECLARE TempData LONGBLOB;"
+"    SELECT ROUND((length(data)-length(replace(data, '\n', "")))/length('\n')) INTO NumOfLines"
+"    FROM fdata"
+"    WHERE fid = file_id;"
+"    SELECT data INTO TempData FROM fdata WHERE fid = file_id;"
+"    WHILE IterationCount <= NumOfLines DO"
+"        SELECT SUBSTRING_INDEX(TempData, '\n', IterationCount) INTO ExtractedData;"
+"        SELECT SUBSTRING_INDEX(ExtractedData, '\n', -1) INTO CurrentLine;"
+"        SELECT POSITION(search_string IN CurrentLine) INTO StringPosition;"
+"        IF StringPosition > 0 THEN"
+"           SELECT IterationCount AS LineNumber, CurrentLine;"
+"        END IF;"
+"        SET IterationCount = IterationCount + 1;"
+"        SET CurrentLine = '';"
+"        SET StringPosition = 0;"
+"    END WHILE;"
+"END$$"
+"DELIMITER ;"
+)
+
 add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
 add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
@@ -63,6 +95,9 @@ fileid = 0
 def open_database(cursor, dbname):
     try:
         cursor.execute("USE {}".format(dbname))
+        #for line in open("./grep_stored_procedure.sql"):
+            #cursor.execute(line)
+        #cursor.execute(GREP_SP)
     except mysql.connector.Error as err:
         print("Failed opening database: {}".format(err))
         return 1
@@ -106,7 +141,8 @@ def create_database(cnx, cursor, dbname, fspath):
             "UPDATE tree SET fid = 0 WHERE name = '/'")
         cursor.execute(
             "INSERT fattrb(fid, mode, uid, gid, nlink, mtime, size)"
-                " VALUES(0, 16877, 0, 0, 1, 0, 0)")            
+                " VALUES(0, 16877, 0, 0, 1, 0, 0)")  
+        #cursor.execute(GREP_SP)          
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
         return 1            

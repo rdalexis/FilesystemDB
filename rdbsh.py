@@ -8,6 +8,7 @@ import mysqlglobals as gl
 from cd import cd_main
 from ls import ls_main
 from find import find_main
+from grep import grep_main
 
 from mysqlfscreate import create_database, open_database
 import dbman
@@ -188,7 +189,9 @@ def main(argv):
          else:
             print("Please check the arguments given for find command")
       elif(cmdparam[0] == 'grep'):
-         print("grep command")
+         print("grep Command")
+         if len(cmdparam) == 3:
+            grep_main(cmdparam[1], cmdparam[2]) 
       elif(cmdparam[0] == 'exit'):
          print("Terminating mysqlfs shell")
          break
