@@ -32,8 +32,10 @@ def call_procedure_selectresults(sp_name, sp_args):
         return 1
 
 def sp_fetch_selectresults_all():
+    stored_proc_results = []
     for result in gl.cursor.stored_results():
-        return result.fetchall() 
+        stored_proc_results.extend(result.fetchall()) 
+    return stored_proc_results
 
 def call_procedure_argresults(sp_name, sp_args):
     try:
