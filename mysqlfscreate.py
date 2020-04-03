@@ -8,7 +8,7 @@ import dbman
 # Default size is 64MB. So, setting 50MB
 DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user']
+TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user', 'group', 'usergroup']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
@@ -59,6 +59,21 @@ TABLES[TABLES_IN_DB[4]] = (
    "CREATE TABLE `user` ("
    "`id` int NOT NULL,"
    "`name` varchar(32) NOT NULL"
+   ")  DEFAULT CHARSET=utf8mb4"
+   )
+
+TABLES[TABLES_IN_DB[5]] = (
+   "CREATE TABLE `fgroup` ("
+   "`id` int NOT NULL,"
+   "`name` varchar(32) NOT NULL"
+   ")  DEFAULT CHARSET=utf8mb4"
+   )
+
+TABLES[TABLES_IN_DB[6]] = (
+   "CREATE TABLE `usergroup` ("
+   "`userid` int NOT NULL,"
+   "`groupid` int NOT NULL,"
+   "PRIMARY KEY  (`userid`, `groupid`)"
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
@@ -157,9 +172,8 @@ def create_database(cnx, cursor, dbname, fspath):
 
     # populate data 
     scan_directories(cursor, fspath, 0)
-
-    # create user table
     createUserTable(cursor, fspath)
+    createGroupTable(cursor, fspath)
 
     # TODO creating tree entry for ~, etc.,
 
@@ -167,7 +181,8 @@ def create_database(cnx, cursor, dbname, fspath):
     cnx.commit()
 
 # create user table
-add_user_entry = ("INSERT INTO user (id, name) VALUES (%s, %s)")
+add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
+add_usergroup_entry = ("INSERT INTO usergroup(userid, groupid) VALUES (%s, %s)")
 def createUserTable(cursor, path):
     passwdfilepath = path+"/etc/passwd"
 
@@ -188,6 +203,54 @@ def createUserTable(cursor, path):
             except mysql.connector.Error as err:
                 print("Failed creating link table: {}".format(err))
                 return 1
+
+            try:
+                usergrouptableentry = []
+                usergrouptableentry.append(userentry[2])
+                usergrouptableentry.append(userentry[3])
+                cursor.execute(add_usergroup_entry, usergrouptableentry)
+            except mysql.connector.Error as err:
+                print("Failed creating link table: {}".format(err))
+                return 1            
+
+# create user table
+add_group_entry = ("INSERT INTO fgroup(id, name) VALUES (%s, %s)")
+add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
+    " VALUES ((SELECT id from user where name = %s), %s)")
+def createGroupTable(cursor, path):
+    groupfilepath = path+"/etc/group"
+
+    if not os.path.isfile(groupfilepath):
+       print("File path {} does not exist. Exiting...".format(groupfilepath))
+       return 1    
+    
+    with open(groupfilepath) as fp:        
+        for line in fp:
+            #print("contents {}".format(line))
+            groupentry = line.strip().split(':')
+            groupusers = line.strip().rsplit(':', 1)
+
+            #print(groupentry)
+            try:
+                grouptableentry = []
+                grouptableentry.append(groupentry[2])
+                grouptableentry.append(groupentry[0])
+                cursor.execute(add_group_entry, grouptableentry)
+            except mysql.connector.Error as err:
+                print("Failed creating fgroup table: {}".format(err))
+                return 1
+            
+            if (groupusers[1] != ""):
+                gusplit = groupusers[1].split(',')
+                for user in gusplit:
+                    try:
+                        guentry = []
+                        guentry.append(user)
+                        guentry.append(groupentry[2])
+                        cursor.execute(add_groupuser_entry, guentry)
+                    except mysql.connector.Error as err:
+                        print("Failed creating usergroup table: {}".format(err))
+                        return 1            
 
 """
 def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
