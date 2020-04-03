@@ -31,6 +31,14 @@ def update_terminal_path(newpath):
     if gl.terminalpath == "": gl.terminalpath = "/"
     #print(gl.terminalpath)
 
+# cd ..
+# cd /
+# cd ~
+# cd /home/mk
+# cd /home/../home/..
+# cd a.txt
+# cd //
+# cd ../../../../.. 
 def cd_main(cmdparam):
 
     if (len(cmdparam) > 2):

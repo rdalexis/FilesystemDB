@@ -3,11 +3,12 @@ from __future__ import print_function
 import os
 import mysql.connector
 from mysql.connector import errorcode
+import dbman
 
 # Default size is 64MB. So, setting 50MB
 DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link']
+TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
@@ -52,6 +53,13 @@ TABLES[TABLES_IN_DB[3]] = (
    "`tfid` bigint(20) NOT NULL,"
    "PRIMARY KEY  (`sfid`)"
    ")  DEFAULT CHARSET=binary"
+   )
+
+TABLES[TABLES_IN_DB[4]] = (
+   "CREATE TABLE `user` ("
+   "`id` int NOT NULL,"
+   "`name` varchar(32) NOT NULL"
+   ")  DEFAULT CHARSET=utf8mb4"
    )
 
 GREP_SP = ( 
@@ -150,10 +158,36 @@ def create_database(cnx, cursor, dbname, fspath):
     # populate data 
     scan_directories(cursor, fspath, 0)
 
+    # create user table
+    createUserTable(cursor, fspath)
+
     # TODO creating tree entry for ~, etc.,
 
     # There will be no update after this point, hence commit
     cnx.commit()
+
+# create user table
+add_user_entry = ("INSERT INTO user (id, name) VALUES (%s, %s)")
+def createUserTable(cursor, path):
+    passwdfilepath = path+"/etc/passwd"
+
+    if not os.path.isfile(passwdfilepath):
+       print("File path {} does not exist. Exiting...".format(passwdfilepath))
+       return 1    
+    
+    with open(passwdfilepath) as fp:        
+        for line in fp:
+            #print("contents {}".format(line))
+            userentry = line.strip().split(':')           
+            #print(userentry)
+            try:
+                usertableentry = []
+                usertableentry.append(userentry[2])
+                usertableentry.append(userentry[0])
+                cursor.execute(add_user_entry, usertableentry)
+            except mysql.connector.Error as err:
+                print("Failed creating link table: {}".format(err))
+                return 1
 
 """
 def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
