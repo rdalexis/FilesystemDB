@@ -41,6 +41,20 @@ def CloseMysqlConn():
    gl.cursor.close()
    gl.cnx.close()
 
+def getUsersGroups():
+   UserQry = "SELECT * FROM user"
+   if dbman.query_execute(UserQry) == 0:
+      results = dbman.query_fetchresult_all()
+      for row in results:
+         gl.users[row[0]] = row[1]
+
+   GroupQry = "SELECT * FROM fgroup"
+   if dbman.query_execute(GroupQry) == 0:
+      results = dbman.query_fetchresult_all()
+      for row in results:
+         gl.groups[row[0]] = row[1]
+
+
 def TerminalInit():
    # Get fid of root 
    gl.fidroot = dbman.get_childfid(0, "/", True, False)
@@ -54,6 +68,10 @@ def TerminalInit():
    
    gl.terminalpath = "~"
    gl.current_fid = gl.fiduser
+
+   getUsersGroups()
+
+
 
 def main(argv):
    uname = ''
@@ -159,14 +177,13 @@ def main(argv):
          #print("cd Command")
          cd_main(cmdparam)
       elif(cmdparam[0] == 'ls'):
-         print("ls command")
          if len(cmdparam) == 1:
             ls_main()
          elif len(cmdparam) == 2:
             if cmdparam[1] == '-l':
                ls_main(True)
             else:
-               ls_main(None, cmdparam[1])
+               ls_main(False, cmdparam[1])
          elif len(cmdparam) == 3:
             if cmdparam[1] == '-l':
                ls_main(True, cmdparam[2])
