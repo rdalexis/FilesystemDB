@@ -4,6 +4,7 @@ import os
 import mysql.connector
 from mysql.connector import errorcode
 import dbman
+import datetime
 
 # Default size is 64MB. So, setting 50MB
 DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
@@ -33,10 +34,10 @@ TABLES[TABLES_IN_DB[1]] = (
    "`uid` int(10) unsigned NOT NULL default '0',"
    "`gid` int(10) unsigned NOT NULL default '0',"
    "`nlink` int(10) unsigned NOT NULL default '0',"
-   "`mtime` int(10) unsigned NOT NULL default '0',"
+   "`mtime` timestamp NOT NULL,"
    "`size` bigint(20) NOT NULL default '0',"
    "PRIMARY KEY  (`fid`)"
-   ") DEFAULT CHARSET=binary"
+   ") DEFAULT CHARSET=utf8mb4"
    )
 
 TABLES[TABLES_IN_DB[2]] = (
@@ -164,7 +165,7 @@ def create_database(cnx, cursor, dbname, fspath):
             "UPDATE tree SET fid = 0 WHERE name = '/'")
         cursor.execute(
             "INSERT fattrb(fid, mode, uid, gid, nlink, mtime, size)"
-                " VALUES(0, 16877, 0, 0, 1, 0, 0)")  
+                " VALUES(0, 16877, 0, 0, 1, CURRENT_TIMESTAMP, 0)")  
         #cursor.execute(GREP_SP)          
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
@@ -296,7 +297,11 @@ def f_attributes(cursor, fid, attr):
        fattrb.append(attr.st_uid)
        fattrb.append(attr.st_gid)
        fattrb.append(attr.st_nlink)
-       fattrb.append(attr.st_mtime)
+       #fattrb.append(attr.st_mtime)
+       #timestamp_str = datetime.datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d-%H:%M')
+       timestamp_str = datetime.datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d-%H:%M:%S')
+       #print(timestamp_str)
+       fattrb.append(timestamp_str)
        fattrb.append(attr.st_size)
        cursor.execute(add_fattrb_entry, fattrb)
 

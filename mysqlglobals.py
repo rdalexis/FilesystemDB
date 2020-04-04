@@ -20,3 +20,8 @@ def globalsInit():
     # terminal path string
     global terminalpath
     terminalpath = ""
+
+    # user and group dictionaries
+    global users, groups
+    users = {}
+    groups = {}

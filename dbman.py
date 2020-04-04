@@ -93,6 +93,7 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
     pathsplit = dirpath.split('/')
     splitsize = len(pathsplit)
     mode = 16384
+    slashatend = False
 
     #print(dirpath, pathsplit, splitsize)
 
@@ -103,14 +104,21 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
                 return gl.fidroot, mode
             else:
                 return gl.fidroot
-        if (isdirectorycheck == True and pathsplit[splitsize - 1] == ""):
+
+        # if (isdirectorycheck == True and pathsplit[splitsize - 1] == ""):
+        #     pathsplit.pop()
+        #     splitsize = splitsize - 1
+        # elif (isdirectorycheck == False and pathsplit[splitsize - 1] == ""):
+        #     if isreturnmode:
+        #         return -1, 0
+        #     else:
+        #         return -1
+
+        # handling for / at the end
+        if (pathsplit[splitsize - 1] == ""):
             pathsplit.pop()
             splitsize = splitsize - 1
-        elif (isdirectorycheck == False and pathsplit[splitsize - 1] == ""):
-            if isreturnmode:
-                return -1, 0
-            else:
-                return -1
+            slashatend = True        
 
     for i in range(splitsize):
         # Check for / at begin and end
@@ -146,15 +154,20 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
             mode = 0
             break
 
+    # only a directory can have slash at the end
+    if slashatend == True:
+        if (16384 & mode) != 16384:
+            currfid = -1
+
     if isreturnmode:
         return currfid, mode
     else:
         return currfid
 
 def get_folder_elements_with_attrib(fidfolder):
-    qry = "SELECT T.fid, mode, uid, gid, nlink, mtime, size, tfid"\
-        " FROM (SELECT fid FROM tree WHERE parentid = "+str(fidfolder)+") T"\
-        " INNER JOIN fattrb F ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
+    qry = "SELECT T.fid, T.name, mode, nlink, uid, gid, size, mtime, tfid"\
+        " FROM (SELECT fid, name FROM tree WHERE parentid = "+str(fidfolder)+") T"\
+        " INNER JOIN fattrb F ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid ORDER BY T.name ASC"
     if query_execute(qry) == 0:
         result = query_fetchresult_all()
         # print(qry)
@@ -167,7 +180,7 @@ def get_folder_elements_with_attrib(fidfolder):
         return -1    
 
 def get_file_with_attrib(fidfile):
-    qry = "SELECT F.fid, mode, uid, gid, nlink, mtime, size, tfid"\
+    qry = "SELECT F.fid, NULL, mode, nlink, uid, gid, size, mtime, tfid"\
         " FROM fattrb F LEFT JOIN link L ON F.fid = L.sfid"\
         " WHERE F.fid = "+str(fidfile)
     if query_execute(qry) == 0:
