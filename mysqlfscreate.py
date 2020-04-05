@@ -24,7 +24,7 @@ TABLES[TABLES_IN_DB[0]] = (
     "UNIQUE KEY `name` (`name`,`parentid`),"
     "KEY `fid` (`fid`),"
     "KEY `parentid` (`parentid`)"
-    ") DEFAULT CHARSET=utf8"
+    ") DEFAULT CHARSET=utf8mb4"
     )
 
 TABLES[TABLES_IN_DB[1]] = (
@@ -45,7 +45,7 @@ TABLES[TABLES_IN_DB[2]] = (
    "`fid` bigint(20) NOT NULL,"
    "`data` longblob,"
    "PRIMARY KEY  (`fid`)"
-   ")  DEFAULT CHARSET=binary"
+   ")  DEFAULT CHARSET=utf8mb4"
    )
 
 TABLES[TABLES_IN_DB[3]] = (
@@ -53,7 +53,7 @@ TABLES[TABLES_IN_DB[3]] = (
    "`sfid` bigint(20) NOT NULL,"
    "`tfid` bigint(20) NOT NULL,"
    "PRIMARY KEY  (`sfid`)"
-   ")  DEFAULT CHARSET=binary"
+   ")  DEFAULT CHARSET=utf8mb4"
    )
 
 TABLES[TABLES_IN_DB[4]] = (
