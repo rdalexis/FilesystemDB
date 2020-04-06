@@ -45,7 +45,7 @@ TABLES[TABLES_IN_DB[2]] = (
    "`fid` bigint(20) NOT NULL,"
    "`data` longblob,"
    "PRIMARY KEY  (`fid`)"
-   ")  DEFAULT CHARSET=utf8mb4"
+   ")  DEFAULT CHARSET=binary"
    )
 
 TABLES[TABLES_IN_DB[3]] = (

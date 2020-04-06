@@ -79,7 +79,6 @@ def TerminalInit():
          fid = dbman.get_fid_from_dirpath(gl.fidroot, path, True, False)
          if fid != -1:
             gl.pathfids.append(fid)
-   # print(gl.pathfids)
 
    try:
       os.mkdir("exectemp", 0o777)
@@ -111,13 +110,6 @@ def checkandexecute(cmdparam):
       return
    data = dbman.query_fetchresult_one()
 
-   print("DATA LENGTH : ", len(data))
-   print(data)
-
-   datastr = str(data, "utf-8")
-   print(datastr)
-   return
-
    fileDir = os.path.dirname(os.path.realpath('__file__'))
    filepath = "exectemp/"+str(cmdparam[0])
    filename = os.path.join(fileDir, filepath)
@@ -130,11 +122,18 @@ def checkandexecute(cmdparam):
          raise
       pass        
 
-   f = open(filename,"w+")
+   f = open(filename,"wb+")
    f.write(data[0])
    f.close()
+   os.chmod(filename, 0o777)
 
+   cwd = os.getcwd()
+   os.chdir(cwd+"/exectemp")
 
+   p = subprocess.Popen(cmdparam)
+   p.wait()
+
+   os.chdir(cwd)
 
    try:
       os.remove(filename)
@@ -142,12 +141,7 @@ def checkandexecute(cmdparam):
       if exc.errno != errno.ENOENT:
          # remove issue
          raise
-      pass   
-
-   p = subprocess.Popen(["ls", "-l"], shell=True) 
-   p.wait()
-
-
+      pass
 
 
 def main(argv):
@@ -287,10 +281,9 @@ def main(argv):
          if len(cmdparam) == 3:
             grep_main(cmdparam[1], cmdparam[2]) 
       elif(cmdparam[0] == 'exit'):
-         print("Terminating mysqlfs shell")
+         # print("Terminating mysqlfs shell")
          break
       else:
-         print("Assuming executable")
          checkandexecute(cmdparam)
 
    # Do all necessary cleanups
