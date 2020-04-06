@@ -1,8 +1,10 @@
 # Imports
 import sys, getopt
-import os
+import os, glob
+import errno
 import mysql.connector
 from mysql.connector import errorcode
+import subprocess
 
 import mysqlglobals as gl
 from cd import cd_main
@@ -22,13 +24,12 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 #from mysqlfscreate import CreateFSDatabase
 
 # Globals
-# CMDS = ['cd', 'ls', 'find', 'grep'] 
-
+# CMDS = ['cd', 'ls', 'find', 'grep']
 
 # mysql connection
 def OpenMysqlConn(uname, pwd, hostip):
    try: 
-      gl.cnx = mysql.connector.connect(user=uname, password=pwd, host=hostip)
+      gl.cnx = mysql.connector.connect(user=uname, password=pwd, host=hostip, use_pure=True)
    except mysql.connector.Error as err:
       logging.error(str(err))
       return 1
@@ -69,8 +70,78 @@ def TerminalInit():
    gl.terminalpath = "~"
    gl.current_fid = gl.fiduser
 
-   getUsersGroups()
+   #getUsersGroups()
 
+   # paths
+   pathdirs = gl.PATH.split(":")
+   for path in pathdirs:
+      if path != "":
+         fid = dbman.get_fid_from_dirpath(gl.fidroot, path, True, False)
+         if fid != -1:
+            gl.pathfids.append(fid)
+
+   try:
+      os.mkdir("exectemp", 0o777)
+   except OSError as exc:
+      if exc.errno != errno.EEXIST:
+         raise
+      pass   
+ 
+
+def checkandexecute(cmdparam):
+
+   filefid, mode = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[0], False, True)
+   if filefid == -1:
+      for pathfid in gl.pathfids:
+         filefid, mode = dbman.get_fid_from_dirpath(pathfid, cmdparam[0], False, True)
+         if filefid != -1:
+            break
+
+   if filefid == -1:
+      print(cmdparam[0], ": command not found")
+      return
+
+   # TODO to check whether the file is executable or not
+
+   # get data
+   qry = "SELECT data FROM fdata WHERE fid = "+str(filefid)
+   if dbman.query_execute(qry) == 1:
+      print(cmdparam[0], " execution error")
+      return
+   data = dbman.query_fetchresult_one()
+
+   fileDir = os.path.dirname(os.path.realpath('__file__'))
+   filepath = "exectemp/"+str(cmdparam[0])
+   filename = os.path.join(fileDir, filepath)
+
+   try:
+      os.remove(filename)
+   except OSError as exc:
+      if exc.errno != errno.ENOENT:
+         # remove issue
+         raise
+      pass        
+
+   f = open(filename,"wb+")
+   f.write(data[0])
+   f.close()
+   os.chmod(filename, 0o777)
+
+   cwd = os.getcwd()
+   os.chdir(cwd+"/exectemp")
+
+   p = subprocess.Popen(cmdparam)
+   p.wait()
+
+   os.chdir(cwd)
+
+   try:
+      os.remove(filename)
+   except OSError as exc:
+      if exc.errno != errno.ENOENT:
+         # remove issue
+         raise
+      pass
 
 
 def main(argv):
@@ -97,8 +168,8 @@ def main(argv):
       logging.error ("ERROR : USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
       sys.exit(2)
 
-   logging.debug("Opts : %s", opts)
-   logging.debug("Args : %s", args)   
+   # logging.debug("Opts : %s", opts)
+   # logging.debug("Args : %s", args)   
       
    for opt, arg in opts:
       if opt in ("-h", "--help"):
@@ -117,13 +188,13 @@ def main(argv):
       elif opt == '-f':
          dbcreatefilepath = arg
 
-   logging.debug ("Input parameters : ")
-   logging.debug ("Username : %s", uname)
-   logging.debug ("Password : %s", pwd)
-   logging.debug ("Host ip : %s", hostip)
-   logging.debug ("Create db name : %s", createdbname)
-   logging.debug ("Existing DB name : %s", existdbname)
-   logging.debug ("DB File Create Path : %s", dbcreatefilepath)
+   # logging.debug ("Input parameters : ")
+   # logging.debug ("Username : %s", uname)
+   # logging.debug ("Password : %s", pwd)
+   # logging.debug ("Host ip : %s", hostip)
+   # logging.debug ("Create db name : %s", createdbname)
+   # logging.debug ("Existing DB name : %s", existdbname)
+   # logging.debug ("DB File Create Path : %s", dbcreatefilepath)
 
    if (uname == "" or pwd == "" or hostip == ""):
       logging.error ("USAGE : rdbsh.py -u <user> -p <password> -i <host ip> -e <exising db name> -c <create db name> -f <filesystem path>")
@@ -148,8 +219,8 @@ def main(argv):
    # check if max_allowed_packet is set or not
    gl.cursor.execute("SHOW VARIABLES LIKE 'max_allowed_packet'")
    gl.qryrecords = gl.cursor
-   for x in gl.qryrecords:
-      logging.debug(x)
+   # for x in gl.qryrecords:
+   #    logging.debug(x)
 
    # create db if required
    if (createdbname != ""):
@@ -210,10 +281,10 @@ def main(argv):
          if len(cmdparam) == 3:
             grep_main(cmdparam[1], cmdparam[2]) 
       elif(cmdparam[0] == 'exit'):
-         print("Terminating mysqlfs shell")
+         # print("Terminating mysqlfs shell")
          break
       else:
-         print("Command not found")
+         checkandexecute(cmdparam)
 
    # Do all necessary cleanups
 
