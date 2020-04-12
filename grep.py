@@ -3,6 +3,10 @@ import mysqlglobals as gl
 import dbman
 
 #grep directory /snap/README
+#grep 'directory' /snap/README
+#grep "directory" /snap/README
+#grep -i "directory" /snap/README -> ignore case
+#grep -n 'directory' /snap/README -> line number
 def grep_main(search_string, file_to_search):
 #first check if file_to_search is a file or folder
 #if folder, report error

@@ -193,3 +193,14 @@ def get_file_with_attrib(fidfile):
             return -1
     else:
         return -1         
+
+def get_linkfid_from_linkpath():
+    result = []
+    qry = "SELECT l.fid, data, linkfid FROM link AS l INNER JOIN fdata AS f ON l.fid = f.fid"
+    if query_execute(qry) == 0:
+        result = query_fetchresult_all()
+        for i in range(len(result)):
+            (fid, data, linkfid) = result[i]
+            fid_result = get_fid_from_dirpath(fidroot, data)
+            find_linkfid_qry = "UPDATE link SET linkfid='"+str(fid_result)+"' WHERE fid='"+str(fid)+"'"
+            query_execute(find_linkfid_qry)

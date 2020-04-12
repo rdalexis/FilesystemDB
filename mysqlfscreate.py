@@ -5,42 +5,38 @@ import mysql.connector
 from mysql.connector import errorcode
 import dbman
 import datetime
+from stat import *
+import dbman
 
-# Default size is 64MB. So, setting 50MB
-DEFAULT_MAX_ALLOWABLE_PACKET = 524288000
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user', 'group', 'usergroup']
+TABLES_IN_DB = ['fattrb', 'fdata', 'link', 'user', 'group', 'usergroup']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
 DROP_FDATA = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[2]
 
 TABLES = {}
-TABLES[TABLES_IN_DB[0]] = (
-    "CREATE TABLE `tree` ("
-    "`fid` bigint(20) unsigned NOT NULL auto_increment,"
-    "`parentid` bigint(20) unsigned default NULL,"
-    "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
-    "UNIQUE KEY `name` (`name`,`parentid`),"
-    "KEY `fid` (`fid`),"
-    "KEY `parentid` (`parentid`)"
-    ") DEFAULT CHARSET=utf8mb4"
-    )
 
-TABLES[TABLES_IN_DB[1]] = (
+TABLES['fattrb'] = (
    "CREATE TABLE `fattrb` ("
-   "`fid` bigint(20) NOT NULL,"
-   "`mode` int(11) NOT NULL default '0',"
+   "`fid` bigint(20) unsigned NOT NULL,"
+   "`parentid` bigint(20) unsigned default NULL,"
+   "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
+   "`filetype` int(11) NOT NULL default '0',"
    "`uid` int(10) unsigned NOT NULL default '0',"
    "`gid` int(10) unsigned NOT NULL default '0',"
-   "`nlink` int(10) unsigned NOT NULL default '0',"
+   "`userpm` int(11) NOT NULL default '0',"
+   "`grppm` int(11) NOT NULL default '0',"
+   "`otherpm` int(11) NOT NULL default '0',"
    "`mtime` timestamp NOT NULL,"
    "`size` bigint(20) NOT NULL default '0',"
-   "PRIMARY KEY  (`fid`)"
+   "PRIMARY KEY  (`fid`),"
+   "UNIQUE KEY `name` (`name`,`parentid`),"
+   "KEY `parentid` (`parentid`)"
    ") DEFAULT CHARSET=utf8mb4"
    )
 
-TABLES[TABLES_IN_DB[2]] = (
+TABLES['fdata'] = (
    "CREATE TABLE `fdata` ("
    "`fid` bigint(20) NOT NULL,"
    "`data` longblob,"
@@ -48,29 +44,29 @@ TABLES[TABLES_IN_DB[2]] = (
    ")  DEFAULT CHARSET=binary"
    )
 
-TABLES[TABLES_IN_DB[3]] = (
+TABLES['link'] = (
    "CREATE TABLE `link` ("
-   "`sfid` bigint(20) NOT NULL,"
-   "`tfid` bigint(20) NOT NULL,"
-   "PRIMARY KEY  (`sfid`)"
+   "`fid` bigint(20) NOT NULL,"
+   "`linkfid` bigint(20) NOT NULL,"
+   "PRIMARY KEY  (`fid`)"
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-TABLES[TABLES_IN_DB[4]] = (
+TABLES['user'] = (
    "CREATE TABLE `user` ("
    "`id` int NOT NULL,"
    "`name` varchar(32) NOT NULL"
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-TABLES[TABLES_IN_DB[5]] = (
-   "CREATE TABLE `fgroup` ("
+TABLES['group'] = (
+   "CREATE TABLE `group` ("
    "`id` int NOT NULL,"
    "`name` varchar(32) NOT NULL"
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-TABLES[TABLES_IN_DB[6]] = (
+TABLES['usergroup'] = (
    "CREATE TABLE `usergroup` ("
    "`userid` int NOT NULL,"
    "`groupid` int NOT NULL,"
@@ -78,50 +74,20 @@ TABLES[TABLES_IN_DB[6]] = (
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-GREP_SP = ( 
-"DELIMITER $$"
-"CREATE PROCEDURE grep("
-"    IN file_id BIGINT,"
-"    IN search_string VARCHAR(255)"
-")"
-"BEGIN"
-"    DECLARE NumOfLines INT DEFAULT 0;"
-"    DECLARE IterationCount INT DEFAULT 0;"
-"    DECLARE ExtractedData LONGBLOB;"
-"    DECLARE CurrentLine VARCHAR(255) DEFAULT '';"
-"    DECLARE StringPosition INT DEFAULT 0;"
-"    DECLARE TempData LONGBLOB;"
-"    SELECT ROUND((length(data)-length(replace(data, '\n', "")))/length('\n')) INTO NumOfLines"
-"    FROM fdata"
-"    WHERE fid = file_id;"
-"    SELECT data INTO TempData FROM fdata WHERE fid = file_id;"
-"    WHILE IterationCount <= NumOfLines DO"
-"        SELECT SUBSTRING_INDEX(TempData, '\n', IterationCount) INTO ExtractedData;"
-"        SELECT SUBSTRING_INDEX(ExtractedData, '\n', -1) INTO CurrentLine;"
-"        SELECT POSITION(search_string IN CurrentLine) INTO StringPosition;"
-"        IF StringPosition > 0 THEN"
-"           SELECT IterationCount AS LineNumber, CurrentLine;"
-"        END IF;"
-"        SET IterationCount = IterationCount + 1;"
-"        SET CurrentLine = '';"
-"        SET StringPosition = 0;"
-"    END WHILE;"
-"END$$"
-"DELIMITER ;"
-)
-
-add_tree_entry = ("INSERT INTO tree (fid, parentid, name) VALUES (%s, %s, %s)")
-add_fattrb_entry = ("INSERT INTO fattrb (fid, mode, uid, gid, nlink, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+add_fattrb_entry = ("INSERT INTO fattrb (fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
+add_link_entry = ("INSERT INTO link (fid, linkfid) VALUES (%s, %s)")
+add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
+add_usergroup_entry = ("INSERT INTO usergroup(userid, groupid) VALUES (%s, %s)")
+add_group_entry = ("INSERT INTO group(id, name) VALUES (%s, %s)")
+add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
+    " VALUES ((SELECT id from user where name = %s), %s)")
 
 fileid = 0
-
+hardlink = dict()
 def open_database(cursor, dbname):
     try:
         cursor.execute("USE {}".format(dbname))
-        #for line in open("./grep_stored_procedure.sql"):
-            #cursor.execute(line)
-        #cursor.execute(GREP_SP)
     except mysql.connector.Error as err:
         print("Failed opening database: {}".format(err))
         return 1
@@ -158,21 +124,23 @@ def create_database(cnx, cursor, dbname, fspath):
             print("Creating table : {}".format(table_name))
 
     # adding root, just for testing, TODO make it proper
-    try:    
+    """try:    
         cursor.execute(
-            "INSERT tree(fid, parentid, name) VALUES(0,0,'/')")
+            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size)"
+                " VALUES(0, 0, '/', <filetype>, 0, 0, <userpm, grppm, ownerpm>, CURRENT_TIMESTAMP, 0)")   
         cursor.execute(
-            "UPDATE tree SET fid = 0 WHERE name = '/'")
-        cursor.execute(
-            "INSERT fattrb(fid, mode, uid, gid, nlink, mtime, size)"
-                " VALUES(0, 16877, 0, 0, 1, CURRENT_TIMESTAMP, 0)")  
-        #cursor.execute(GREP_SP)          
+            "UPDATE fattrb SET fid = 0 WHERE name = '/'")
+        #cursor.execute(
+        #    "INSERT fattrb(fid, parentid, name, mode, uid, gid, nlink, mtime, size)"
+        #        " VALUES(0, 16877, 0, 0, 1, CURRENT_TIMESTAMP, 0)")            
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
-        return 1            
+        return 1                     
+    """
 
     # populate data 
     scan_directories(cursor, fspath, 0)
+    dbman.get_linkfid_from_linkpath()
     createUserTable(cursor, fspath)
     createGroupTable(cursor, fspath)
 
@@ -181,9 +149,6 @@ def create_database(cnx, cursor, dbname, fspath):
     # There will be no update after this point, hence commit
     cnx.commit()
 
-# create user table
-add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
-add_usergroup_entry = ("INSERT INTO usergroup(userid, groupid) VALUES (%s, %s)")
 def createUserTable(cursor, path):
     passwdfilepath = path+"/etc/passwd"
 
@@ -214,10 +179,6 @@ def createUserTable(cursor, path):
                 print("Failed creating link table: {}".format(err))
                 return 1            
 
-# create user table
-add_group_entry = ("INSERT INTO fgroup(id, name) VALUES (%s, %s)")
-add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
-    " VALUES ((SELECT id from user where name = %s), %s)")
 def createGroupTable(cursor, path):
     groupfilepath = path+"/etc/group"
 
@@ -238,7 +199,7 @@ def createGroupTable(cursor, path):
                 grouptableentry.append(groupentry[0])
                 cursor.execute(add_group_entry, grouptableentry)
             except mysql.connector.Error as err:
-                print("Failed creating fgroup table: {}".format(err))
+                print("Failed creating group table: {}".format(err))
                 return 1
             
             if (groupusers[1] != ""):
@@ -253,28 +214,18 @@ def createGroupTable(cursor, path):
                         print("Failed creating usergroup table: {}".format(err))
                         return 1            
 
-"""
-def read_in_chunks(file_object, chunk_size=DEFAULT_MAX_ALLOWABLE_PACKET):
-    while True:
-        try:
-           data = file_object.read(chunk_size)
-           if not data:
-              break
-           yield data
-        except:
-           return None
-def file_data(fid, fentry):
-       seq = 0
-       file_to_read = open(fentry, 'rb')
-       for piece in read_in_chunks(file_to_read):
-           fdata = []
-           fdata.append(fid)
-           fdata.append(seq)
-           fdata.append(piece)
-           cursor.execute(add_fdata_entry, fdata)
-           seq = seq + 1
-       file_to_read.close()
-"""
+def store_softlinks(cursor, fid, fentry):
+    linkdata = []
+    linkdata.append(fid)
+    linkdata.append(0)
+    cursor.execute(add_link_entry, linkdata)
+    
+    print("store_softlinks ----> start "+ str(fentry.name))
+    sfdata = []
+    sfdata.append(fid)
+    sfdata.append(os.readlink(fentry))
+    cursor.execute(add_fdata_entry, sfdata)
+    print("store_softlinks ----> end "+ str(fentry.name))
 
 def file_data(cursor, fid, fentry):
     try:
@@ -284,19 +235,25 @@ def file_data(cursor, fid, fentry):
     except:
        print('Cannot read '+str(fentry.name))
        file_content = None
+    print("file_data ----> start "+ str(fentry.name))
     fdata = []
     fdata.append(fid)
     fdata.append(file_content)
     cursor.execute(add_fdata_entry, fdata)
+    print("file_data ----> end "+ str(fentry.name))
 
-def f_attributes(cursor, fid, attr):
+def f_attributes(cursor, fid, parentid, fname, attr):
     if not attr is None:
        fattrb = []
        fattrb.append(fid)
-       fattrb.append(attr.st_mode)
+       fattrb.append(parentid)
+       fattrb.append(fname)
+       fattrb.append(S_IFMT(attr.st_mode))
        fattrb.append(attr.st_uid)
        fattrb.append(attr.st_gid)
-       fattrb.append(attr.st_nlink)
+       fattrb.append(attr.st_mode & S_IRWXU)
+       fattrb.append(attr.st_mode & S_IRWXG)
+       fattrb.append(attr.st_mode & S_IRWXO)
        #fattrb.append(attr.st_mtime)
        #timestamp_str = datetime.datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d-%H:%M')
        timestamp_str = datetime.datetime.fromtimestamp(attr.st_mtime).strftime('%Y-%m-%d-%H:%M:%S')
@@ -309,7 +266,6 @@ def scan_directories(cursor, path, parentid):
     global fileid
     with os.scandir(path) as dir_entries:
         for entry in dir_entries:
-            print(entry.name)
             tree_entry = []
             fileid = fileid + 1
             info = None
@@ -320,20 +276,44 @@ def scan_directories(cursor, path, parentid):
                 pass
             
             if info is not None:
-                f_attributes(cursor, fileid, info)
-                tree_entry.append(fileid)
-                tree_entry.append(parentid)
-                tree_entry.append(entry.name) 
-                cursor.execute(add_tree_entry, tree_entry)
+                f_attributes(cursor, fileid, parentid, entry.name, info)
                 if os.path.isdir(entry):  
                    parentid1 = fileid
                    fileid = scan_directories(cursor, entry, parentid1)  
                 elif os.path.isfile(entry):  
-                   file_data(cursor, fileid, entry)
-                elif os.path.islink(entry):
-                   print(str(entry.name)+' link')
-                else:
-                   dummy = None    
+                   if os.path.islink(entry):
+                      try:
+                         store_softlinks(cursor, fileid, entry)
+                      except Exception as e:
+                         print("type error: " + str(e))
+                   else:
+                      file_data(cursor, fileid, entry)
+                      if info.st_nlink >= 2:
+                         hardlink.setdefault(fileid, info.st_ino)
             else:
                 fileid = fileid - 1
     return fileid
+
+
+"""try: 
+   cnx = mysql.connector.connect(user='root', password='root', host='127.0.0.1', database='filesystem', use_pure=True)
+   cursor = cnx.cursor()
+except mysql.connector.Error as err:
+   print('Mysql connection error')
+   exit();   
+cursor.execute("SET GLOBAL max_allowed_packet=1073741824")
+cursor.close()
+cnx.close()
+
+try: 
+   cnx = mysql.connector.connect(user='root', password='root', host='127.0.0.1', database='filesystem', use_pure=True)
+   cursor = cnx.cursor()
+except mysql.connector.Error as err:
+   print('Mysql connection error')
+   exit();  
+cursor.execute("SHOW VARIABLES LIKE 'max_allowed_packet'")
+create_database(cnx, cursor, 'filesystem', "../../FilesystemDB_Dataset/")
+
+cursor.close()
+cnx.close()
+"""
