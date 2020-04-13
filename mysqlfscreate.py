@@ -30,6 +30,7 @@ TABLES['fattrb'] = (
    "`otherpm` int(11) NOT NULL default '0',"
    "`mtime` timestamp NOT NULL,"
    "`size` bigint(20) NOT NULL default '0',"
+   "`nlink` int(10) NOT NULL default '0',"
    "PRIMARY KEY  (`fid`),"
    "UNIQUE KEY `name` (`name`,`parentid`),"
    "KEY `parentid` (`parentid`)"
@@ -74,7 +75,7 @@ TABLES['usergroup'] = (
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-add_fattrb_entry = ("INSERT INTO fattrb (fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+add_fattrb_entry = ("INSERT INTO fattrb (fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
 add_link_entry = ("INSERT INTO link (fid, linkfid) VALUES (%s, %s)")
 add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
@@ -256,6 +257,7 @@ def f_attributes(cursor, fid, parentid, fname, attr):
        #print(timestamp_str)
        fattrb.append(timestamp_str)
        fattrb.append(attr.st_size)
+       fattrb.append(attr.st_nlink)
        cursor.execute(add_fattrb_entry, fattrb)
 
 def scan_directories(cursor, path, parentid):
