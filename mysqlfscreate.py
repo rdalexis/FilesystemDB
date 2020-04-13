@@ -9,7 +9,7 @@ from stat import *
 import dbman
 
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['fattrb', 'fdata', 'link', 'user', 'group', 'usergroup']
+TABLES_IN_DB = ['fattrb', 'fdata', 'link', 'user', 'fgroup', 'usergroup']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
@@ -60,8 +60,8 @@ TABLES['user'] = (
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-TABLES['group'] = (
-   "CREATE TABLE `group` ("
+TABLES['fgroup'] = (
+   "CREATE TABLE `fgroup` ("
    "`id` int NOT NULL,"
    "`name` varchar(32) NOT NULL"
    ")  DEFAULT CHARSET=utf8mb4"
@@ -80,7 +80,7 @@ add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
 add_link_entry = ("INSERT INTO link (fid, linkfid) VALUES (%s, %s)")
 add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
 add_usergroup_entry = ("INSERT INTO usergroup(userid, groupid) VALUES (%s, %s)")
-add_group_entry = ("INSERT INTO group(id, name) VALUES (%s, %s)")
+add_group_entry = ("INSERT INTO fgroup(id, name) VALUES (%s, %s)")
 add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
     " VALUES ((SELECT id from user where name = %s), %s)")
 
@@ -125,19 +125,15 @@ def create_database(cnx, cursor, dbname, fspath):
             print("Creating table : {}".format(table_name))
 
     # adding root, just for testing, TODO make it proper
-    """try:    
+    try:    
         cursor.execute(
-            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
-                " VALUES(0, 0, '/', <filetype>, 0, 0, <userpm, grppm, ownerpm>, CURRENT_TIMESTAMP, 0, 1)")   
+            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size)"
+                " VALUES(0, 0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0)")   
         cursor.execute(
-            "UPDATE fattrb SET fid = 0 WHERE name = '/'")
-        #cursor.execute(
-        #    "INSERT fattrb(fid, parentid, name, mode, uid, gid, nlink, mtime, size)"
-        #        " VALUES(0, 16877, 0, 0, 1, CURRENT_TIMESTAMP, 0)")            
+            "UPDATE fattrb SET fid = 0 WHERE name = '/'")           
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
-        return 1                     
-    """
+        return 1
 
     # populate data 
     scan_directories(cursor, fspath, 0)
