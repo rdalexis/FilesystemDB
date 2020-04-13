@@ -48,35 +48,39 @@ def call_procedure_argresults(sp_name, sp_args):
         print("Error : {}".format(err))
         return 1
 
-def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnmode):
-    qry = "SELECT T.fid, F.mode, L.tfid, (SELECT mode from fattrb WHERE fid = L.tfid) "\
-        "FROM (SELECT fid FROM tree WHERE parentid = "\
-        +str(parentfid)+" AND name LIKE '"+childdirname+"') T INNER JOIN fattrb F "\
-            "ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
+def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnfiletype):
+    # qry = "SELECT T.fid, F.mode, L.tfid, (SELECT mode from fattrb WHERE fid = L.tfid) "\
+    #     "FROM (SELECT fid FROM tree WHERE parentid = "\
+    #     +str(parentfid)+" AND name LIKE '"+childdirname+"') T INNER JOIN fattrb F "\
+    #         "ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
+    qry = "SELECT F.fid, F.filetype, L.linkfid, (SELECT filetype from fattrb WHERE fid = L.linkfid) "\
+        "FROM (SELECT fid, filetype FROM fattrb WHERE parentid = "\
+        +str(parentfid)+" AND name LIKE '"+childdirname+"') F"\
+            " LEFT JOIN link L ON F.fid = L.fid"            
     if query_execute(qry) == 0:
         result = query_fetchresult_one()
         # print(qry)
         # print("query output : ", result)
         if (len(result) != 0):
-            # get mode
-            if result[2] == None: mode = result[1]
-            else: mode = result[3]
+            # get filetype
+            if result[2] == None: filetype = result[1]
+            else: filetype = result[3]
 
-            if (isdirectorycheck == True) and ((16384 & mode) != 16384):
-                if isreturnmode == True: return -1, 0 
+            if (isdirectorycheck == True) and ((16384 & filetype) != 16384):
+                if isreturnfiletype == True: return -1, 0 
                 else: return -1
             elif result[2] != None:
-                if isreturnmode == True: return result[2], mode 
+                if isreturnfiletype == True: return result[2], filetype 
                 else: return result[2]
             else:
-                if isreturnmode == True: return result[0], mode 
+                if isreturnfiletype == True: return result[0], filetype 
                 else: return result[0]
         else:
-            if isreturnmode == True: return -1, 0 
+            if isreturnfiletype == True: return -1, 0 
             else: return -1
 
 def get_parentfid(childfid):
-    qry = "SELECT parentid FROM tree WHERE fid = "+str(childfid)
+    qry = "SELECT parentid FROM fattrb WHERE fid = "+str(childfid)
     if query_execute(qry) == 0:
         result = query_fetchresult_one()
         # print(qry)
@@ -88,11 +92,11 @@ def get_parentfid(childfid):
     else:
         return -1
 
-def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmode = False):
+def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnfiletype = False):
     dirtraversed = []
     pathsplit = dirpath.split('/')
     splitsize = len(pathsplit)
-    mode = 16384
+    filetype = 16384
     slashatend = False
 
     #print(dirpath, pathsplit, splitsize)
@@ -100,8 +104,8 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
     if splitsize > 1:
         if splitsize == 2 and pathsplit[0] == "" and pathsplit[1] == "":
             # handling for just path : /
-            if isreturnmode:
-                return gl.fidroot, mode
+            if isreturnfiletype:
+                return gl.fidroot, filetype
             else:
                 return gl.fidroot
 
@@ -109,7 +113,7 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
         #     pathsplit.pop()
         #     splitsize = splitsize - 1
         # elif (isdirectorycheck == False and pathsplit[splitsize - 1] == ""):
-        #     if isreturnmode:
+        #     if isreturnfiletype:
         #         return -1, 0
         #     else:
         #         return -1
@@ -146,21 +150,21 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnmod
         else:
             dirtraversed.append(currfid)
             if(i == splitsize - 1):
-                currfid, mode = get_childfid(currfid, pathsplit[i], isdirectorycheck, True)
+                currfid, filetype = get_childfid(currfid, pathsplit[i], isdirectorycheck, True)
             else:
                 currfid = get_childfid(currfid, pathsplit[i], True, False)
     
         if currfid == -1:
-            mode = 0
+            filetype = 0
             break
 
     # only a directory can have slash at the end
     if slashatend == True:
-        if (16384 & mode) != 16384:
+        if (16384 & filetype) != 16384:
             currfid = -1
 
-    if isreturnmode:
-        return currfid, mode
+    if isreturnfiletype:
+        return currfid, filetype
     else:
         return currfid
 
@@ -201,6 +205,6 @@ def get_linkfid_from_linkpath():
         result = query_fetchresult_all()
         for i in range(len(result)):
             (fid, data, linkfid) = result[i]
-            fid_result = get_fid_from_dirpath(fidroot, data)
+            fid_result = get_fid_from_dirpath(gl.fidroot, data)
             find_linkfid_qry = "UPDATE link SET linkfid='"+str(fid_result)+"' WHERE fid='"+str(fid)+"'"
             query_execute(find_linkfid_qry)
