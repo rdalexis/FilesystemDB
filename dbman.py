@@ -53,10 +53,14 @@ def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnfiletype):
     #     "FROM (SELECT fid FROM tree WHERE parentid = "\
     #     +str(parentfid)+" AND name LIKE '"+childdirname+"') T INNER JOIN fattrb F "\
     #         "ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid"
+    # qry = "SELECT F.fid, F.filetype, L.linkfid, (SELECT filetype from fattrb WHERE fid = L.linkfid) "\
+    #     "FROM (SELECT fid, filetype FROM fattrb WHERE parentid = "\
+    #     +str(parentfid)+" AND name LIKE '"+childdirname+"') F"\
+    #         " LEFT JOIN link L ON F.fid = L.fid" 
     qry = "SELECT F.fid, F.filetype, L.linkfid, (SELECT filetype from fattrb WHERE fid = L.linkfid) "\
-        "FROM (SELECT fid, filetype FROM fattrb WHERE parentid = "\
-        +str(parentfid)+" AND name LIKE '"+childdirname+"') F"\
-            " LEFT JOIN link L ON F.fid = L.fid"            
+        "FROM fattrb F LEFT JOIN link L ON F.fid = L.fid WHERE F.parentid = "\
+        +str(parentfid)+" AND F.name LIKE '"+childdirname+"'"
+
     if query_execute(qry) == 0:
         result = query_fetchresult_one()
         # print(qry)
@@ -169,9 +173,11 @@ def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnfil
         return currfid
 
 def get_folder_elements_with_attrib(fidfolder):
-    qry = "SELECT T.fid, T.name, mode, nlink, uid, gid, size, mtime, tfid"\
-        " FROM (SELECT fid, name FROM tree WHERE parentid = "+str(fidfolder)+") T"\
-        " INNER JOIN fattrb F ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid ORDER BY T.name ASC"
+    # qry = "SELECT T.fid, T.name, mode, nlink, uid, gid, size, mtime, tfid"\
+    #     " FROM (SELECT fid, name FROM tree WHERE parentid = "+str(fidfolder)+") T"\
+    #     " INNER JOIN fattrb F ON T.fid = F.fid LEFT JOIN link L ON T.fid = L.sfid ORDER BY T.name ASC"
+    qry = "SELECT F.fid, F.name, F.filetype, F.uid, F.gid, F.userpm, F.grppm, F.otherpm, F.mtime, F.size, F.nlink, L.linkfid"\
+        " FROM fattrb F LEFT JOIN link L ON F.fid = L.fid WHERE F.parentid = "+str(fidfolder)+" ORDER BY F.name ASC"    
     if query_execute(qry) == 0:
         result = query_fetchresult_all()
         # print(qry)
@@ -184,8 +190,8 @@ def get_folder_elements_with_attrib(fidfolder):
         return -1    
 
 def get_file_with_attrib(fidfile):
-    qry = "SELECT F.fid, NULL, mode, nlink, uid, gid, size, mtime, tfid"\
-        " FROM fattrb F LEFT JOIN link L ON F.fid = L.sfid"\
+    qry = "SELECT F.fid, F.name, F.filetype, F.uid, F.gid, F.userpm, F.grppm, F.otherpm, F.mtime, F.size, F.nlink, L.linkfid"\
+        " FROM fattrb F LEFT JOIN link L ON F.fid = L.fid"\
         " WHERE F.fid = "+str(fidfile)
     if query_execute(qry) == 0:
         result = query_fetchresult_one()

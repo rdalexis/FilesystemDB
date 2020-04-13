@@ -24,24 +24,37 @@ def getPermission(per):
         else: modestring += "-"
     return modestring
 
-def ls_detailed(ftype, uper, gper, oper, nlink, uid, guid, size, mtime, name, tfid):
+def ls_detailed(attrib = []):
+# F.fid, F.name, F.filetype, F.uid, F.gid, F.userpm, F.grppm, F.otherpm, F.mtime, F.size, F.nlink, L.linkfid
+    name = attrib[1]
+    filetype = attrib[2]
+    uid = attrib[3]
+    gid = attrib[4]
+    userpm = (attrib[5] >> 6) & S_IRWXO
+    grppm = (attrib[6] >> 3) & S_IRWXO
+    otherpm = attrib[7]
+    mtime = attrib[8]
+    size = attrib[9]
+    nlink = attrib[10]
+    linkfid = attrib[11]
+
     modestring = ""
-    if tfid is not None:
+    if linkfid is not None:
         modestring += "l"
-    elif ftype == S_IFREG:
+    elif filetype == S_IFREG:
         modestring += "-"
-    elif ftype == S_IFDIR:
+    elif filetype == S_IFDIR:
         modestring += "d"
     else:
         # to handle others
         modestring += "-"
 
-    modestring += getPermission(uper)
-    modestring += getPermission(gper)
-    modestring += getPermission(oper)
+    modestring += getPermission(userpm)
+    modestring += getPermission(grppm)
+    modestring += getPermission(otherpm)
 
     user = gl.users[uid]
-    group = gl.groups[guid]
+    group = gl.groups[gid]
 
     mtimestr = str(mtime.strftime("%b %d, %H:%M"))
 
@@ -58,16 +71,16 @@ def ls_main(listdetailed = False, path = None):
     # handling for /
 
     if path is not None:
-        lsfid, lsmode = dbman.get_fid_from_dirpath(gl.current_fid, path, False, True)
+        lsfid, filetype = dbman.get_fid_from_dirpath(gl.current_fid, path, False, True)
         if lsfid == -1:
             print("ls: cannot access '{}': No such file or directory".format(path))
             return
     else:
         lsfid = gl.current_fid
-        lsmode = 16384
+        filetype = 16384
 
     # TODO Need to handle link
-    if (lsmode & 16384) == 16384:
+    if (filetype & 16384) == 16384:
         attribarray = dbman.get_folder_elements_with_attrib(lsfid)
         files = ""
         if listdetailed == False:
@@ -78,18 +91,7 @@ def ls_main(listdetailed = False, path = None):
         else:
             for attrib in attribarray:
                 if attrib[1] != "/":
-                    ls_detailed(attrib[2] & S_IFMT,
-                                (attrib[2] >> 6) & S_IRWXO,
-                                (attrib[2] >> 3) & S_IRWXO,
-                                attrib[2] & S_IRWXO,
-                                attrib[3],
-                                attrib[4],
-                                attrib[5],
-                                attrib[6],
-                                attrib[7],
-                                attrib[1],
-                                attrib[8]
-                    )
+                    ls_detailed(attrib)
 
     else:
         attrib = dbman.get_file_with_attrib(lsfid)
@@ -98,15 +100,4 @@ def ls_main(listdetailed = False, path = None):
         if listdetailed == False:
             print(filename)
         else:
-            ls_detailed(attrib[2] & S_IFMT,
-                        (attrib[2] >> 6) & S_IRWXO,
-                        (attrib[2] >> 3) & S_IRWXO,
-                        attrib[2] & S_IRWXO,
-                        attrib[3],
-                        attrib[4],
-                        attrib[5],
-                        attrib[6],
-                        attrib[7],
-                        filename,
-                        attrib[8]
-            )
+            ls_detailed(attrib)
