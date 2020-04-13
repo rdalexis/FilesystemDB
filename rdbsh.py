@@ -70,7 +70,7 @@ def TerminalInit():
    gl.terminalpath = "~"
    gl.current_fid = gl.fiduser
 
-   #getUsersGroups()
+   getUsersGroups()
 
    # paths
    pathdirs = gl.PATH.split(":")
