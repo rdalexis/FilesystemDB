@@ -292,11 +292,13 @@ def scan_directories(cursor, path, parentid):
                 pass
             
             if info is not None:
-                f_attributes(cursor, fileid, parentid, entry.name, info)
                 tree_entry.append(fileid)
                 tree_entry.append(parentid)
-                tree_entry.append(info.st_ino) 
+                tree_entry.append(info.st_ino)
                 cursor.execute(add_tree_entry, tree_entry)
+
+                f_attributes(cursor, fileid, parentid, entry.name, info)
+
                 if os.path.isdir(entry):  
                    parentid1 = fileid
                    if os.path.islink(entry):

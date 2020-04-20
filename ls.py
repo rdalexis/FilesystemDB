@@ -82,6 +82,8 @@ def ls_main(listdetailed = False, path = None):
     # TODO Need to handle link
     if (filetype & 16384) == 16384:
         attribarray = dbman.get_folder_elements_with_attrib(lsfid)
+        if attribarray == -1:
+            return
         files = ""
         if listdetailed == False:
             for attrib in attribarray:
