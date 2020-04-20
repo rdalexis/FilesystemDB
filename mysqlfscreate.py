@@ -93,8 +93,8 @@ add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
     " VALUES ((SELECT id from user where name = %s), %s)")
 
 fileid = 0
-#hardlink = dict()
-resolvedsoftlinks = dict()
+storeinodes = list()
+resolvedsoftlinks = list()
 def open_database(cnx, cursor, dbname):
     try:
         cursor.execute("USE {}".format(dbname))
@@ -157,7 +157,6 @@ def create_database(cnx, cursor, dbname, fspath):
     # There will be no update after this point, hence commit
     cnx.commit()
 
-    #print(resolvedsoftlinks)
     store_link_ids()
     cnx.commit()
 
@@ -226,40 +225,40 @@ def createGroupTable(cursor, path):
                         print("Failed creating usergroup table: {}".format(err))
                         return 1            
 
-def store_softlinks(cursor, fid, fentry):
+def store_softlinks(cursor, fid, nodeid, fentry):
     linkdata = []
     linkdata.append(fid)
     linkdata.append(0)
     cursor.execute(add_link_entry, linkdata)
     
-    print("store_softlinks ----> start "+ str(fentry.name))
-    sfdata = []
-    sfdata.append(fid)
-    linkpath = os.readlink(fentry)
-    sfdata.append(linkpath)
-    print("softlinks real path " + os.readlink(fentry))
-    cursor.execute(add_fdata_entry, sfdata)
-    resolvedsoftlinks.setdefault(fid, os.path.relpath(os.path.realpath(fentry), os.path.dirname(os.path.abspath(fentry))))
-    #print(resolvedsoftlinks)
-    print("store_softlinks ----> end "+ str(fentry.name))
+    if nodeid not in storeinodes:
+       sfdata = []
+       sfdata.append(nodeid)
+       linkpath = os.readlink(fentry)
+       sfdata.append(linkpath)
+       cursor.execute(add_fdata_entry, sfdata)
+       
+    rsoftlinks = (fid, nodeid, os.path.relpath(os.path.realpath(fentry), os.path.dirname(os.path.abspath(fentry))))
+    resolvedsoftlinks.append(rsoftlinks)
 
 def file_data(cursor, nodeid, fentry):
-    try:
-       file_handle = open(fentry, 'rb')
-       file_content = file_handle.read()
-       file_handle.close()
-    except:
-       print('Cannot read '+str(fentry.name))
-       file_content = None
-    print("file_data ----> start "+ str(fentry.name))
-    fdata = []
-    fdata.append(nodeid)
-    fdata.append(file_content)
-    cursor.execute(add_fdata_entry, fdata)
-    print("file_data ----> end "+ str(fentry.name))
+    if nodeid not in storeinodes:
+       try:
+          file_handle = open(fentry, 'rb')
+          file_content = file_handle.read()
+          file_handle.close()
+       except:
+          print('Cannot read '+str(fentry.name))
+          file_content = None
+       print("file_data ----> start "+ str(fentry.name))
+       fdata = []
+       fdata.append(nodeid)
+       fdata.append(file_content)
+       cursor.execute(add_fdata_entry, fdata)
+       print("file_data ----> end "+ str(fentry.name))
 
 def f_attributes(cursor, fid, parentid, fname, attr):
-    if not attr is None:
+    if not attr is None and attr.st_ino not in storeinodes:
        fattrb = []
        fattrb.append(attr.st_ino)
        fattrb.append(fname)
@@ -292,29 +291,32 @@ def scan_directories(cursor, path, parentid):
                 pass
             
             if info is not None:
+                #print('inode is '+str(info.st_ino))
                 tree_entry.append(fileid)
                 tree_entry.append(parentid)
                 tree_entry.append(info.st_ino)
                 cursor.execute(add_tree_entry, tree_entry)
-
+                
                 f_attributes(cursor, fileid, parentid, entry.name, info)
 
                 if os.path.isdir(entry):  
                    parentid1 = fileid
                    if os.path.islink(entry):
-                      store_softlinks(cursor, parentid1, entry)
+                      store_softlinks(cursor, parentid1, info.st_ino, entry)
+                   # stores the inodes of directories
+                   storeinodes.append(info.st_ino)
                    fileid = scan_directories(cursor, entry, parentid1)  
                 elif os.path.isfile(entry):  
                    if os.path.islink(entry):
-                      store_softlinks(cursor, fileid, entry)
+                      store_softlinks(cursor, fileid, info.st_ino, entry)
                    else:
                       file_data(cursor, info.st_ino, entry)
-                      #if info.st_nlink >= 2:
-                         #hardlink.setdefault(fileid, info.st_ino)
+                storeinodes.append(info.st_ino)
             else:
                 fileid = fileid - 1
     return fileid
 
 def store_link_ids():
-    for key in resolvedsoftlinks:
-        dbman.get_linkfid_from_linkpath(key, resolvedsoftlinks[key])    
+    for i in range(len(resolvedsoftlinks)):
+        (fid, nodeid, resolvedpath) = resolvedsoftlinks[i]
+        dbman.get_linkfid_from_linkpath(fid, nodeid, resolvedpath)    

@@ -214,24 +214,17 @@ def get_file_with_attrib(fidfile):
     else:
         return -1         
 
-def get_linkfid_from_linkpath(fid, resolved_link_path):
-    #result = []
-    #qry = "SELECT l.fid, data, linkfid FROM link AS l LEFT JOIN fdata AS f ON l.fid = f.fid"
-    #if query_execute(qry) == 0:
-        #result = query_fetchresult_all()
-        #print(result)
-        #for i in range(len(result)):
-            #(fid, data, linkfid) = result[i]
-            #print('fid ' +str(fid))
-            #print('data ' + str(data))
-            #print('linkfid ' + str(linkfid))
-            subqry = "SELECT parentid FROM tree WHERE fid = "+str(fid);
-            if query_execute(subqry) == 0:
-               subresult = query_fetchresult_one()
-               #print('subresult '+str(subresult))
-               pfid = subresult[0]
-               #print(pfid)
-            fid_result = get_fid_from_dirpath(pfid, str(resolved_link_path))
-            #print('fid_result ' +str(fid_result))
-            find_linkfid_qry = "UPDATE link SET linkfid='"+str(fid_result)+"' WHERE fid='"+str(fid)+"'"
-            query_execute(find_linkfid_qry)
+def get_linkfid_from_linkpath(fid, nodeid, resolved_link_path):
+    subqry = "SELECT parentid FROM tree INNER JOIN fattrb as f WHERE fid = "+str(fid) +" AND f.nodeid = "+str(nodeid);
+    print('fid '+str(fid))
+    print('nodeid '+str(nodeid))
+    print('rpath '+str(resolved_link_path))
+    if query_execute(subqry) == 0:
+       subresult = query_fetchresult_one()
+       print('subresult '+str(subresult))
+       pfid = subresult[0]
+       print(pfid)
+       fid_result = get_fid_from_dirpath(pfid, str(resolved_link_path))
+       print('fid_result ' +str(fid_result))
+       find_linkfid_qry = "UPDATE link SET linkfid='"+str(fid_result)+"' WHERE fid='"+str(fid)+"'"
+       query_execute(find_linkfid_qry)
