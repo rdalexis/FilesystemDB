@@ -65,7 +65,7 @@ def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnfiletype):
     qry = "SELECT F.fid, F.filetype, L.linkfid, "\
         "(SELECT B.filetype from tree A INNER JOIN fattrb B ON A.nodeid = B.nodeid WHERE A.fid = L.linkfid) "\
         "FROM (SELECT T.fid, C.filetype FROM tree T INNER JOIN fattrb C ON T.nodeid = C.nodeid "\
-        "WHERE T.parentid = "+str(parentfid)+" AND C.name LIKE '"+childdirname+"') F "\
+        "WHERE T.parentid = "+str(parentfid)+" AND T.name LIKE '"+childdirname+"') F "\
         "LEFT JOIN link L ON F.fid = L.fid"       
 
     if query_execute(qry) == 0:

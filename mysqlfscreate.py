@@ -21,6 +21,7 @@ TABLES['tree'] = (
     "CREATE TABLE `tree` ("
     "`fid` bigint(20) unsigned NOT NULL,"
     "`parentid` bigint(20) unsigned default NULL,"
+    "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
     "`nodeid` bigint(20) unsigned NOT NULL,"
     "PRIMARY KEY (`fid`),"
     "KEY `parentid` (`parentid`)"
@@ -30,7 +31,6 @@ TABLES['tree'] = (
 TABLES['fattrb'] = (
    "CREATE TABLE `fattrb` ("
    "`nodeid` bigint(20) unsigned NOT NULL,"
-   "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
    "`filetype` int(11) NOT NULL default '0',"
    "`uid` int(10) unsigned NOT NULL default '0',"
    "`gid` int(10) unsigned NOT NULL default '0',"
@@ -82,8 +82,8 @@ TABLES['usergroup'] = (
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-add_tree_entry = ("INSERT INTO tree (fid, parentid, nodeid) VALUES (%s, %s, %s)")
-add_fattrb_entry = ("INSERT INTO fattrb (nodeid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+add_tree_entry = ("INSERT INTO tree (fid, parentid, name, nodeid) VALUES (%s, %s, %s, %s)")
+add_fattrb_entry = ("INSERT INTO fattrb (nodeid, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
 add_fdata_entry = ("INSERT INTO fdata (nodeid, data) VALUES (%s, %s)")
 add_link_entry = ("INSERT INTO link (fid, linkfid) VALUES (%s, %s)")
 add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
@@ -137,12 +137,12 @@ def create_database(cnx, cursor, dbname, fspath):
 
     # adding root, just for testing, TODO make it proper
     try:    
-        cursor.execute("INSERT tree(fid, parentid, nodeid) VALUES(0,0,0)")
+        cursor.execute("INSERT tree(fid, parentid, name, nodeid) VALUES(0,0,'/',0)")
         cursor.execute(
-            "INSERT fattrb(nodeid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
-                " VALUES(0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0, 1)")   
+            "INSERT fattrb(nodeid, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
+                " VALUES(1, 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0, 1)")   
         cursor.execute(
-            "UPDATE fattrb SET nodeid = 0 WHERE name = '/'")           
+            "UPDATE fattrb SET nodeid = 0 WHERE nodeid = 1")           
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
         return 1
@@ -261,7 +261,6 @@ def f_attributes(cursor, fid, parentid, fname, attr):
     if not attr is None and attr.st_ino not in storeinodes:
        fattrb = []
        fattrb.append(attr.st_ino)
-       fattrb.append(fname)
        fattrb.append(S_IFMT(attr.st_mode))
        fattrb.append(attr.st_uid)
        fattrb.append(attr.st_gid)
@@ -294,6 +293,7 @@ def scan_directories(cursor, path, parentid):
                 #print('inode is '+str(info.st_ino))
                 tree_entry.append(fileid)
                 tree_entry.append(parentid)
+                tree_entry.append(entry.name)                
                 tree_entry.append(info.st_ino)
                 cursor.execute(add_tree_entry, tree_entry)
                 
