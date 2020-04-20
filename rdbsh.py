@@ -232,7 +232,7 @@ def main(argv):
    else:
       dbname = existdbname      
       # open database
-      if (open_database(gl.cursor, dbname)):
+      if (open_database(gl.cnx, gl.cursor, dbname)):
          CloseMysqlConn()
          sys.exit(2)     
 

@@ -63,14 +63,14 @@ def get_childfid(parentfid, childdirname, isdirectorycheck, isreturnfiletype):
 
     if query_execute(qry) == 0:
         result = query_fetchresult_one()
-        # print(qry)
-        # print("query output : ", result)
+        #print(qry)
+        #print("query output : ", result)
         if (len(result) != 0):
             # get filetype
             if result[2] == None: filetype = result[1]
             else: filetype = result[3]
-
-            if (isdirectorycheck == True) and ((16384 & filetype) != 16384):
+            
+            if (isdirectorycheck == True) and ((16384 & int(filetype)) != 16384):
                 if isreturnfiletype == True: return -1, 0 
                 else: return -1
             elif result[2] != None:
@@ -97,6 +97,7 @@ def get_parentfid(childfid):
         return -1
 
 def get_fid_from_dirpath(currfid, dirpath, isdirectorycheck = False, isreturnfiletype = False):
+    #print('dirpath is '+str(dirpath))
     dirtraversed = []
     pathsplit = dirpath.split('/')
     splitsize = len(pathsplit)
@@ -204,13 +205,24 @@ def get_file_with_attrib(fidfile):
     else:
         return -1         
 
-def get_linkfid_from_linkpath():
-    result = []
-    qry = "SELECT l.fid, data, linkfid FROM link AS l INNER JOIN fdata AS f ON l.fid = f.fid"
-    if query_execute(qry) == 0:
-        result = query_fetchresult_all()
-        for i in range(len(result)):
-            (fid, data, linkfid) = result[i]
-            fid_result = get_fid_from_dirpath(gl.fidroot, data)
+def get_linkfid_from_linkpath(fid, resolved_link_path):
+    #result = []
+    #qry = "SELECT l.fid, data, linkfid FROM link AS l LEFT JOIN fdata AS f ON l.fid = f.fid"
+    #if query_execute(qry) == 0:
+        #result = query_fetchresult_all()
+        #print(result)
+        #for i in range(len(result)):
+            #(fid, data, linkfid) = result[i]
+            #print('fid ' +str(fid))
+            #print('data ' + str(data))
+            #print('linkfid ' + str(linkfid))
+            subqry = "SELECT parentid FROM fattrb WHERE fid = "+str(fid);
+            if query_execute(subqry) == 0:
+               subresult = query_fetchresult_one()
+               #print('subresult '+str(subresult))
+               pfid = subresult[0]
+               #print(pfid)
+            fid_result = get_fid_from_dirpath(pfid, str(resolved_link_path))
+            #print('fid_result ' +str(fid_result))
             find_linkfid_qry = "UPDATE link SET linkfid='"+str(fid_result)+"' WHERE fid='"+str(fid)+"'"
             query_execute(find_linkfid_qry)

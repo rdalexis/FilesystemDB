@@ -86,9 +86,12 @@ add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
 
 fileid = 0
 hardlink = dict()
-def open_database(cursor, dbname):
+resolvedsoftlinks = dict()
+def open_database(cnx, cursor, dbname):
     try:
         cursor.execute("USE {}".format(dbname))
+        #dbman.get_linkfid_from_linkpath()
+        #cnx.commit()
     except mysql.connector.Error as err:
         print("Failed opening database: {}".format(err))
         return 1
@@ -111,7 +114,7 @@ def create_database(cnx, cursor, dbname, fspath):
         return 1
 
     # Open database
-    if (open_database(cursor, dbname) == 1):
+    if (open_database(cnx, cursor, dbname) == 1):
         return 1
 
     # Create tables
@@ -127,8 +130,8 @@ def create_database(cnx, cursor, dbname, fspath):
     # adding root, just for testing, TODO make it proper
     try:    
         cursor.execute(
-            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size)"
-                " VALUES(0, 0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0)")   
+            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
+                " VALUES(0, 0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0, 1)")   
         cursor.execute(
             "UPDATE fattrb SET fid = 0 WHERE name = '/'")           
     except mysql.connector.Error as err:
@@ -137,13 +140,16 @@ def create_database(cnx, cursor, dbname, fspath):
 
     # populate data 
     scan_directories(cursor, fspath, 0)
-    dbman.get_linkfid_from_linkpath()
     createUserTable(cursor, fspath)
     createGroupTable(cursor, fspath)
 
     # TODO creating tree entry for ~, etc.,
 
     # There will be no update after this point, hence commit
+    cnx.commit()
+    #dbman.get_linkfid_from_linkpath()
+    print(resolvedsoftlinks)
+    store_link_ids()
     cnx.commit()
 
 def createUserTable(cursor, path):
@@ -220,8 +226,12 @@ def store_softlinks(cursor, fid, fentry):
     print("store_softlinks ----> start "+ str(fentry.name))
     sfdata = []
     sfdata.append(fid)
-    sfdata.append(os.readlink(fentry))
+    linkpath = os.readlink(fentry)
+    sfdata.append(linkpath)
+    print("softlinks real path " + os.readlink(fentry))
     cursor.execute(add_fdata_entry, sfdata)
+    resolvedsoftlinks.setdefault(fid, os.path.relpath(os.path.realpath(fentry), os.path.dirname(os.path.abspath(fentry))))
+    #print(resolvedsoftlinks)
     print("store_softlinks ----> end "+ str(fentry.name))
 
 def file_data(cursor, fid, fentry):
@@ -277,13 +287,12 @@ def scan_directories(cursor, path, parentid):
                 f_attributes(cursor, fileid, parentid, entry.name, info)
                 if os.path.isdir(entry):  
                    parentid1 = fileid
+                   if os.path.islink(entry):
+                      store_softlinks(cursor, parentid1, entry)
                    fileid = scan_directories(cursor, entry, parentid1)  
                 elif os.path.isfile(entry):  
                    if os.path.islink(entry):
-                      try:
-                         store_softlinks(cursor, fileid, entry)
-                      except Exception as e:
-                         print("type error: " + str(e))
+                      store_softlinks(cursor, fileid, entry)
                    else:
                       file_data(cursor, fileid, entry)
                       if info.st_nlink >= 2:
@@ -291,6 +300,11 @@ def scan_directories(cursor, path, parentid):
             else:
                 fileid = fileid - 1
     return fileid
+
+def store_link_ids():
+    for key in resolvedsoftlinks:
+        dbman.get_linkfid_from_linkpath(key, resolvedsoftlinks[key])    
+    
 
 
 """try: 
