@@ -216,7 +216,7 @@ def get_linkfid_from_linkpath(fid, resolved_link_path):
             #print('fid ' +str(fid))
             #print('data ' + str(data))
             #print('linkfid ' + str(linkfid))
-            subqry = "SELECT parentid FROM fattrb WHERE fid = "+str(fid);
+            subqry = "SELECT parentid FROM tree WHERE fid = "+str(fid);
             if query_execute(subqry) == 0:
                subresult = query_fetchresult_one()
                #print('subresult '+str(subresult))

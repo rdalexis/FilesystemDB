@@ -9,7 +9,7 @@ from stat import *
 import dbman
 
 DB_NAME = 'filesystem'
-TABLES_IN_DB = ['fattrb', 'fdata', 'link', 'user', 'fgroup', 'usergroup']
+TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user', 'fgroup', 'usergroup']
 
 DROP_TREE = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[0]
 DROP_FATTRB = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[1]
@@ -17,10 +17,19 @@ DROP_FDATA = "DROP TABLE IF EXISTS "+ TABLES_IN_DB[2]
 
 TABLES = {}
 
+TABLES['tree'] = (
+    "CREATE TABLE `tree` ("
+    "`fid` bigint(20) unsigned NOT NULL,"
+    "`parentid` bigint(20) unsigned default NULL,"
+    "`nodeid` bigint(20) unsigned NOT NULL,"
+    "PRIMARY KEY (`fid`),"
+    "KEY `parentid` (`parentid`)"
+    ") DEFAULT CHARSET=utf8mb4"
+    )
+
 TABLES['fattrb'] = (
    "CREATE TABLE `fattrb` ("
-   "`fid` bigint(20) unsigned NOT NULL,"
-   "`parentid` bigint(20) unsigned default NULL,"
+   "`nodeid` bigint(20) unsigned NOT NULL,"
    "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
    "`filetype` int(11) NOT NULL default '0',"
    "`uid` int(10) unsigned NOT NULL default '0',"
@@ -31,17 +40,15 @@ TABLES['fattrb'] = (
    "`mtime` timestamp NOT NULL,"
    "`size` bigint(20) NOT NULL default '0',"
    "`nlink` int(10) NOT NULL default '0',"
-   "PRIMARY KEY  (`fid`),"
-   "UNIQUE KEY `name` (`name`,`parentid`),"
-   "KEY `parentid` (`parentid`)"
+   "PRIMARY KEY  (`nodeid`)"
    ") DEFAULT CHARSET=utf8mb4"
    )
 
 TABLES['fdata'] = (
    "CREATE TABLE `fdata` ("
-   "`fid` bigint(20) NOT NULL,"
+   "`nodeid` bigint(20) NOT NULL,"
    "`data` longblob,"
-   "PRIMARY KEY  (`fid`)"
+   "PRIMARY KEY  (`nodeid`)"
    ")  DEFAULT CHARSET=binary"
    )
 
@@ -75,8 +82,9 @@ TABLES['usergroup'] = (
    ")  DEFAULT CHARSET=utf8mb4"
    )
 
-add_fattrb_entry = ("INSERT INTO fattrb (fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
-add_fdata_entry = ("INSERT INTO fdata (fid, data) VALUES (%s, %s)")
+add_tree_entry = ("INSERT INTO tree (fid, parentid, nodeid) VALUES (%s, %s, %s)")
+add_fattrb_entry = ("INSERT INTO fattrb (nodeid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+add_fdata_entry = ("INSERT INTO fdata (nodeid, data) VALUES (%s, %s)")
 add_link_entry = ("INSERT INTO link (fid, linkfid) VALUES (%s, %s)")
 add_user_entry = ("INSERT INTO user(id, name) VALUES (%s, %s)")
 add_usergroup_entry = ("INSERT INTO usergroup(userid, groupid) VALUES (%s, %s)")
@@ -85,7 +93,7 @@ add_groupuser_entry = ("INSERT INTO usergroup(userid, groupid)"\
     " VALUES ((SELECT id from user where name = %s), %s)")
 
 fileid = 0
-hardlink = dict()
+#hardlink = dict()
 resolvedsoftlinks = dict()
 def open_database(cnx, cursor, dbname):
     try:
@@ -129,11 +137,12 @@ def create_database(cnx, cursor, dbname, fspath):
 
     # adding root, just for testing, TODO make it proper
     try:    
+        cursor.execute("INSERT tree(fid, parentid, nodeid) VALUES(0,0,0)")
         cursor.execute(
-            "INSERT fattrb(fid, parentid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
-                " VALUES(0, 0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0, 1)")   
+            "INSERT fattrb(nodeid, name, filetype, uid, gid, userpm, grppm, otherpm, mtime, size, nlink)"
+                " VALUES(0, '/', 16384, 0, 0, 448, 40, 4, CURRENT_TIMESTAMP, 0, 1)")   
         cursor.execute(
-            "UPDATE fattrb SET fid = 0 WHERE name = '/'")           
+            "UPDATE fattrb SET nodeid = 0 WHERE name = '/'")           
     except mysql.connector.Error as err:
         print("Failed inserting value for root : {}".format(err))
         return 1
@@ -147,8 +156,8 @@ def create_database(cnx, cursor, dbname, fspath):
 
     # There will be no update after this point, hence commit
     cnx.commit()
-    #dbman.get_linkfid_from_linkpath()
-    print(resolvedsoftlinks)
+
+    #print(resolvedsoftlinks)
     store_link_ids()
     cnx.commit()
 
@@ -234,7 +243,7 @@ def store_softlinks(cursor, fid, fentry):
     #print(resolvedsoftlinks)
     print("store_softlinks ----> end "+ str(fentry.name))
 
-def file_data(cursor, fid, fentry):
+def file_data(cursor, nodeid, fentry):
     try:
        file_handle = open(fentry, 'rb')
        file_content = file_handle.read()
@@ -244,7 +253,7 @@ def file_data(cursor, fid, fentry):
        file_content = None
     print("file_data ----> start "+ str(fentry.name))
     fdata = []
-    fdata.append(fid)
+    fdata.append(nodeid)
     fdata.append(file_content)
     cursor.execute(add_fdata_entry, fdata)
     print("file_data ----> end "+ str(fentry.name))
@@ -252,8 +261,7 @@ def file_data(cursor, fid, fentry):
 def f_attributes(cursor, fid, parentid, fname, attr):
     if not attr is None:
        fattrb = []
-       fattrb.append(fid)
-       fattrb.append(parentid)
+       fattrb.append(attr.st_ino)
        fattrb.append(fname)
        fattrb.append(S_IFMT(attr.st_mode))
        fattrb.append(attr.st_uid)
@@ -285,6 +293,10 @@ def scan_directories(cursor, path, parentid):
             
             if info is not None:
                 f_attributes(cursor, fileid, parentid, entry.name, info)
+                tree_entry.append(fileid)
+                tree_entry.append(parentid)
+                tree_entry.append(info.st_ino) 
+                cursor.execute(add_tree_entry, tree_entry)
                 if os.path.isdir(entry):  
                    parentid1 = fileid
                    if os.path.islink(entry):
@@ -294,9 +306,9 @@ def scan_directories(cursor, path, parentid):
                    if os.path.islink(entry):
                       store_softlinks(cursor, fileid, entry)
                    else:
-                      file_data(cursor, fileid, entry)
-                      if info.st_nlink >= 2:
-                         hardlink.setdefault(fileid, info.st_ino)
+                      file_data(cursor, info.st_ino, entry)
+                      #if info.st_nlink >= 2:
+                         #hardlink.setdefault(fileid, info.st_ino)
             else:
                 fileid = fileid - 1
     return fileid
@@ -304,28 +316,3 @@ def scan_directories(cursor, path, parentid):
 def store_link_ids():
     for key in resolvedsoftlinks:
         dbman.get_linkfid_from_linkpath(key, resolvedsoftlinks[key])    
-    
-
-
-"""try: 
-   cnx = mysql.connector.connect(user='root', password='root', host='127.0.0.1', database='filesystem', use_pure=True)
-   cursor = cnx.cursor()
-except mysql.connector.Error as err:
-   print('Mysql connection error')
-   exit();   
-cursor.execute("SET GLOBAL max_allowed_packet=1073741824")
-cursor.close()
-cnx.close()
-
-try: 
-   cnx = mysql.connector.connect(user='root', password='root', host='127.0.0.1', database='filesystem', use_pure=True)
-   cursor = cnx.cursor()
-except mysql.connector.Error as err:
-   print('Mysql connection error')
-   exit();  
-cursor.execute("SHOW VARIABLES LIKE 'max_allowed_packet'")
-create_database(cnx, cursor, 'filesystem', "../../FilesystemDB_Dataset/")
-
-cursor.close()
-cnx.close()
-"""
