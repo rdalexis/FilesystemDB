@@ -1,6 +1,7 @@
 import os
 import mysqlglobals as gl
 import dbman
+from ls import *
 
 def recursive_find(find_path, fileid, search_item):
     output = None
@@ -18,14 +19,12 @@ def recursive_find(find_path, fileid, search_item):
         if search_item is not None:
            if search_item == name:
               print(new_directory)
+              print(ls_detailed(dbman.get_file_with_attrib(fid)))
               continue # skip the rest of the code and continue to the next iteration
         else:
            print(new_directory)
+           print(ls_detailed(dbman.get_file_with_attrib(fid)))
         recursive_find(new_directory, fid, search_item)
-
-def form_find_query(name, parentid):
-    find_query = "SELECT fid FROM tree WHERE name='"+str(name)+"' AND parentid=("+str(parentid)+")"
-    return find_query
 
 #find
 #find .
@@ -48,6 +47,7 @@ def find_main(find_path=None, search_item=None):
    
     if search_item is None:
        print(find_path)
+       print(ls_detailed(dbman.get_file_with_attrib(fid_found)))
     if find_path in ['/', '../']:
        find_path = find_path.replace('/','') # workaround to avoid double slashes(//) while printing sub-directories paths.    
     recursive_find(find_path, fid_found, search_item)
