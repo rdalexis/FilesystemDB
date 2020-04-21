@@ -276,8 +276,16 @@ def main(argv):
             print("Please check the arguments given for find command")
       elif(cmdparam[0] == 'grep'):
          print("grep Command")
+         options = []
+         if '-n' in cmdparam:
+            options.append('linenum')
+            cmdparam.remove('-n')
+         if '-i' in cmdparam:
+            options.append('ignorecase')
+            cmdparam.remove('-i')
+         print(cmdparam)
          if len(cmdparam) == 3:
-            grep_main(cmdparam[1], cmdparam[2]) 
+            grep_main(cmdparam[1], cmdparam[2], options) 
       elif(cmdparam[0] == 'exit'):
          # print("Terminating mysqlfs shell")
          break

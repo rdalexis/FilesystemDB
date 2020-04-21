@@ -14,10 +14,10 @@ BEGIN
     DECLARE TempData LONGBLOB;
 
     SELECT ROUND((length(data)-length(replace(data, "\n", "")))/length("\n")) INTO NumOfLines 
-    FROM fdata 
-    WHERE fid = file_id;
+    FROM tree AS t INNER JOIN fdata AS f 
+    WHERE t.fid = file_id AND t.nodeid = f.nodeid;
 
-    SELECT data INTO TempData FROM fdata WHERE fid = file_id;
+    SELECT data INTO TempData FROM tree AS t INNER JOIN fdata AS f WHERE t.fid = file_id AND t.nodeid = f.nodeid;
     WHILE IterationCount <= NumOfLines DO
         SELECT SUBSTRING_INDEX(TempData, "\n", IterationCount) INTO ExtractedData;
         SELECT SUBSTRING_INDEX(ExtractedData, "\n", -1) INTO CurrentLine;
