@@ -59,12 +59,15 @@ def ls_detailed(attrib = []):
 
     mtimestr = str(mtime.strftime("%b %d, %H:%M"))
 
+    data = []
     if linkfid is not None:
         qry = "SELECT data FROM tree NATURAL JOIN fdata WHERE fid = "+str(filefid)
         if dbman.query_execute(qry) == 1:
             print("get data execution error")
             return
         data = dbman.query_fetchresult_one()
+
+    if len(data) != 0:
         print(modestring, nlink, user, group, "{:>6}".format(size), mtimestr, name, "->", data[0])
     else:
         print(modestring, nlink, user, group, "{:>6}".format(size), mtimestr, name)
