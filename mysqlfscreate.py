@@ -300,7 +300,13 @@ def scan_directories(cursor, path, parentid):
                     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     o, e = proc.communicate()
                     if e.decode('ascii') is "":
-                        inode = int(o.decode('ascii').split()[0])
+                        lsout = o.split()
+                        if len(lsout) != 0:
+                            inode = int(lsout[0].decode('ascii'))
+                            if isinstance(inode, int) != True:
+                                info = None
+                        else:
+                            info = None
                     else:
                         print("Error in retrieving inode for :", entry.path)
                         info = None
