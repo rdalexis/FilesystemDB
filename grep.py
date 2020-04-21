@@ -17,6 +17,7 @@ def grep_main(search_string, file_to_search, options = []):
     #print(gl.current_fid)
     search_string = search_string.replace("\"","")
     search_string = search_string.replace("\'","")
+    search_string = search_string.replace('*','')
     if '*' in file_to_search:
        grep_wildcard_path_handling(search_string, file_to_search, options)
        return
