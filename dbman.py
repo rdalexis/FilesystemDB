@@ -197,7 +197,23 @@ def get_folder_elements_with_attrib(fidfolder):
         else:
             return -1
     else:
-        return -1    
+        return -1  
+
+def get_matching_elements_in_folder(fidfolder, match_string):
+
+    qry = "SELECT F.fid, F.name, F.filetype FROM (SELECT * FROM tree NATURAL JOIN fattrb) F "\
+        "WHERE F.parentid = "+str(fidfolder)+" AND name LIKE '"+match_string+"')"    
+
+    if query_execute(qry) == 0:
+        result = query_fetchresult_all()
+        # print(qry)
+        # print("query output : ", result)        
+        if (len(result) != 0):
+            return result
+        else:
+            return -1
+    else:
+        return -1   
 
 def get_file_with_attrib(fidfile):
     qry = "SELECT F.fid, F.name, F.filetype, F.uid, F.gid, F.userpm, F.grppm, F.otherpm, F.mtime, F.size, F.nlink, L.linkfid"\
