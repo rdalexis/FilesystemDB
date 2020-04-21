@@ -101,10 +101,8 @@ def checkandexecute(cmdparam):
       print(cmdparam[0], ": command not found")
       return
 
-   # TODO to check whether the file is executable or not
-
    # get data
-   qry = "SELECT data FROM fdata WHERE fid = "+str(filefid)
+   qry = "SELECT data FROM tree NATURAL JOIN fdata WHERE fid = "+str(filefid)
    if dbman.query_execute(qry) == 1:
       print(cmdparam[0], " execution error")
       return

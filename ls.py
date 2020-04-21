@@ -26,6 +26,7 @@ def getPermission(per):
 
 def ls_detailed(attrib = []):
 # F.fid, F.name, F.filetype, F.uid, F.gid, F.userpm, F.grppm, F.otherpm, F.mtime, F.size, F.nlink, L.linkfid
+    filefid = attrib[0]
     name = attrib[1]
     filetype = attrib[2]
     uid = attrib[3]
@@ -58,7 +59,15 @@ def ls_detailed(attrib = []):
 
     mtimestr = str(mtime.strftime("%b %d, %H:%M"))
 
-    print(modestring, nlink, user, group, "{:>6}".format(size), mtimestr, name)
+    if linkfid is not None:
+        qry = "SELECT data FROM tree NATURAL JOIN fdata WHERE fid = "+str(filefid)
+        if dbman.query_execute(qry) == 1:
+            print("get data execution error")
+            return
+        data = dbman.query_fetchresult_one()
+        print(modestring, nlink, user, group, "{:>6}".format(size), mtimestr, name, "->", data[0])
+    else:
+        print(modestring, nlink, user, group, "{:>6}".format(size), mtimestr, name)
 
 # ls a.txt
 # ls Desktop/a.txt
