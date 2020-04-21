@@ -25,12 +25,12 @@ def grep_main(search_string, file_to_search, options = []):
     #print(file_type)
     if file_type is not None:
        if (file_type & 16384) == 16384:
-          print("grep: "+str(file_folder_to_search) + str(": Is a directory"))
+          print("grep: "+str(file_to_search) + str(": Is a directory"))
           return
-    if fid == -1 or file_type is None:
-       print("grep: "+str(file_folder_to_search) + str(": No such file or directory"))
+    if fid_found == -1 or file_type is None:
+       print("grep: "+str(file_to_search) + str(": No such file or directory"))
        return
-    args = (fid, search_string)
+    args = (fid_found, search_string)
     output = dbman.call_procedure_selectresults('grep', args)
     if output == 0:
        grep_sp_results = dbman.sp_fetch_selectresults_all()
