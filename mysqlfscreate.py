@@ -7,6 +7,7 @@ import dbman
 import datetime
 from stat import *
 import dbman
+import subprocess
 
 DB_NAME = 'filesystem'
 TABLES_IN_DB = ['tree', 'fattrb', 'fdata', 'link', 'user', 'fgroup', 'usergroup']
@@ -257,10 +258,10 @@ def file_data(cursor, nodeid, fentry):
        cursor.execute(add_fdata_entry, fdata)
        print("file_data ----> end "+ str(fentry.name))
 
-def f_attributes(cursor, fid, parentid, fname, attr):
-    if not attr is None and attr.st_ino not in storeinodes:
+def f_attributes(cursor, fid, parentid, attr, entry, inode):
+    if not attr is None and inode not in storeinodes:
        fattrb = []
-       fattrb.append(attr.st_ino)
+       fattrb.append(inode)
        fattrb.append(S_IFMT(attr.st_mode))
        fattrb.append(attr.st_uid)
        fattrb.append(attr.st_gid)
@@ -283,35 +284,50 @@ def scan_directories(cursor, path, parentid):
             tree_entry = []
             fileid = fileid + 1
             info = None
+            inode = 0
             
             try:
                 info = entry.stat()
             except:
-                pass
+                pass            
             
             if info is not None:
+
+                if os.path.islink(entry):
+                    print("link : ", entry.name)
+                    cmd = ['ls', '-i']
+                    cmd.append(entry.path)       
+                    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    o, e = proc.communicate()
+                    if e.decode('ascii') is "":
+                        inode = int(o.decode('ascii').split()[0])
+                    else:
+                        print("Error in retrieving inode for :", entry.path)
+                        info = None
+                else:
+                    inode = info.st_ino                
+
                 #print('inode is '+str(info.st_ino))
                 tree_entry.append(fileid)
                 tree_entry.append(parentid)
-                tree_entry.append(entry.name)                
-                tree_entry.append(info.st_ino)
+                tree_entry.append(entry.name)
+                tree_entry.append(inode)
                 cursor.execute(add_tree_entry, tree_entry)
-                
-                f_attributes(cursor, fileid, parentid, entry.name, info)
+                f_attributes(cursor, fileid, parentid, info, entry, inode)
 
                 if os.path.isdir(entry):  
                    parentid1 = fileid
                    if os.path.islink(entry):
-                      store_softlinks(cursor, parentid1, info.st_ino, entry)
+                      store_softlinks(cursor, parentid1, inode, entry)
                    # stores the inodes of directories
-                   storeinodes.append(info.st_ino)
+                   storeinodes.append(inode)
                    fileid = scan_directories(cursor, entry, parentid1)  
                 elif os.path.isfile(entry):  
                    if os.path.islink(entry):
-                      store_softlinks(cursor, fileid, info.st_ino, entry)
+                      store_softlinks(cursor, fileid, inode, entry)
                    else:
-                      file_data(cursor, info.st_ino, entry)
-                storeinodes.append(info.st_ino)
+                      file_data(cursor, inode, entry)
+                storeinodes.append(inode)
             else:
                 fileid = fileid - 1
     return fileid
