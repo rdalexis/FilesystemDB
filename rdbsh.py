@@ -275,7 +275,7 @@ def main(argv):
          else:
             print("Please check the arguments given for find command")
       elif(cmdparam[0] == 'grep'):
-         print("grep Command")
+         #print("grep Command")
          options = []
          if '-n' in cmdparam:
             options.append('linenum')
@@ -283,7 +283,7 @@ def main(argv):
          if '-i' in cmdparam:
             options.append('ignorecase')
             cmdparam.remove('-i')
-         print(cmdparam)
+         #print(cmdparam)
          if len(cmdparam) == 3:
             grep_main(cmdparam[1], cmdparam[2], options) 
       elif(cmdparam[0] == 'exit'):

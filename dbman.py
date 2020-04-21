@@ -200,9 +200,11 @@ def get_folder_elements_with_attrib(fidfolder):
         return -1  
 
 def get_matching_elements_in_folder(fidfolder, match_string):
-
+    
+    if '*' in match_string:
+       match_string = str('%')+match_string.replace('*','')+str('%')
     qry = "SELECT F.fid, F.name, F.filetype FROM (SELECT * FROM tree NATURAL JOIN fattrb) F "\
-        "WHERE F.parentid = "+str(fidfolder)+" AND name LIKE '"+match_string+"')"    
+        "WHERE F.parentid = "+str(fidfolder)+" AND name LIKE '"+match_string+"'"  
 
     if query_execute(qry) == 0:
         result = query_fetchresult_all()
