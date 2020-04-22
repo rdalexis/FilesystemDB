@@ -37,6 +37,8 @@ def recursive_find(find_path, fileid, search_item):
 #find ../../var
 #find /var/cache -name filename.txt
 #find /var/cache -name foldername
+#find filename -> displays the filename if exists, else error
+#find folder -> displays the folder contents if exists, else error
 def find_main(find_path=None, search_item=None):
     # find with no parameters works on the current directory
     if find_path is None:
@@ -45,7 +47,10 @@ def find_main(find_path=None, search_item=None):
     fid_found = dbman.get_fid_from_dirpath(gl.current_fid, find_path, True, False)
     print('find_path '+str(find_path))
     print('fid_found '+str(fid_found))
-   
+    if fid_found == -1:
+       print("find: ‘"+str(find_path)+"’: No such file or directory")
+       return
+
     if search_item is None:
        print(find_path)
        ls_detailed(dbman.get_file_with_attrib(fid_found))
