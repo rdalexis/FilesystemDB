@@ -52,11 +52,14 @@ def cd_main(cmdparam):
 
     #print("CD traverse path : ", cmdparam[1])
 
-    newfid = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], True, False)
+    newfid, filetype = dbman.get_fid_from_dirpath(gl.current_fid, cmdparam[1], False, True)
     if newfid != -1:
-        # print("fid : ", newfid, "for ", cmdparam[1])
-        update_terminal_path(cmdparam[1])
-        gl.current_fid = newfid
+        if filetype != 16384:
+            print("bash: cd:", cmdparam[1] ,": Not a directory")
+        else:
+            # print("fid : ", newfid, "for ", cmdparam[1])
+            update_terminal_path(cmdparam[1])
+            gl.current_fid = newfid
     else:
         print("bash: cd:", cmdparam[1] ,": No such file or directory")
 
