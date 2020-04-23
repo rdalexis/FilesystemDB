@@ -112,14 +112,14 @@ def checkandexecute(cmdparam):
    filepath = "exectemp/"+str(cmdparam[0])
    filename = os.path.join(fileDir, filepath)
 
-   try:
+   """try:
       os.remove(filename)
    except OSError as exc:
       if exc.errno != errno.ENOENT:
          # remove issue
          raise
       pass        
-
+   """
    f = open(filename,"wb+")
    f.write(data[0])
    f.close()
@@ -133,14 +133,14 @@ def checkandexecute(cmdparam):
 
    os.chdir(cwd)
 
-   try:
+   """try:
       os.remove(filename)
    except OSError as exc:
       if exc.errno != errno.ENOENT:
          # remove issue
          raise
       pass
-
+   """
 
 def main(argv):
    uname = ''

@@ -25,7 +25,8 @@ TABLES['tree'] = (
     "`name` varchar(255) character set utf8 collate utf8_bin NOT NULL,"
     "`nodeid` bigint(20) unsigned NOT NULL,"
     "PRIMARY KEY (`fid`),"
-    "KEY `parentid` (`parentid`)"
+    "KEY `parentid` (`parentid`),"
+    "KEY `nodeid` (`nodeid`)"
     ") DEFAULT CHARSET=utf8mb4"
     )
 
@@ -255,7 +256,43 @@ def createGroupTable(cursor, path):
                         cursor.execute(add_groupuser_entry, guentry)
                     except mysql.connector.Error as err:
                         print("Failed creating usergroup table: {}".format(err))
-                        return 1            
+                        return 1       
+       
+def addkeyconstraints():
+    fk_qry = "ALTER TABLE fattrb "\
+      "ADD FOREIGN KEY (`nodeid`) REFERENCES `tree`(`nodeid`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False 
+
+    fk_qry = "ALTER TABLE fattrb "\
+      "ADD FOREIGN KEY (`uid`) REFERENCES `user`(`id`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False 
+
+    fk_qry = "ALTER TABLE fattrb "\
+      "ADD FOREIGN KEY (`gid`) REFERENCES `fgroup`(`id`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False 
+
+    fk_qry = "ALTER TABLE fdata "\
+      "ADD FOREIGN KEY (`nodeid`) REFERENCES `tree`(`nodeid`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False
+
+    fk_qry = "ALTER TABLE link "\
+      "ADD FOREIGN KEY (`fid`) REFERENCES `tree`(`fid`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False 
+
+    fk_qry = "ALTER TABLE usergroup "\
+      "ADD FOREIGN KEY (`userid`) REFERENCES `user`(`id`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False      
+
+    fk_qry = "ALTER TABLE usergroup "\
+      "ADD FOREIGN KEY (`groupid`) REFERENCES `group`(`id`)"
+    if dbman.query_execute(fk_qry) == False:
+      return False    
 
 def store_softlinks(cursor, fid, nodeid, fentry):
     linkdata = []
