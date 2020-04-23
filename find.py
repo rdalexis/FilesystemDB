@@ -16,14 +16,19 @@ def recursive_find(find_path, fileid, search_item):
       if fid == 0 and parentid == 0:
          continue
       new_directory = find_path+str('/')+name
-      if search_item is not None:
-         new_search = search_item.replace('*', '')        
-         if new_search in name:
-            print(new_directory)
+      if search_item is not None: 
+         if '*' in search_item:   
+            new_search = search_item.replace('*', '') 
+            if new_search in name: 
+               print(new_directory.replace('//','/'))
+               ls_detailed(dbman.get_file_with_attrib(fid))
+               continue # skip the rest of the code and continue to the next iteration  
+         elif search_item == name:
+            print(new_directory.replace('//','/'))
             ls_detailed(dbman.get_file_with_attrib(fid))
             continue # skip the rest of the code and continue to the next iteration
       else:
-         print(new_directory)
+         print(new_directory.replace('//','/'))
          ls_detailed(dbman.get_file_with_attrib(fid))
       recursive_find(new_directory, fid, search_item)
 
@@ -44,9 +49,9 @@ def find_main(find_path=None, search_item=None):
     if find_path is None:
        find_path = '.'
 
-    fid_found = dbman.get_fid_from_dirpath(gl.current_fid, find_path, True, False)
-    print('find_path '+str(find_path))
-    print('fid_found '+str(fid_found))
+    fid_found = dbman.get_fid_from_dirpath(gl.current_fid, find_path, False, False)
+    #print('find_path '+str(find_path))
+    #print('fid_found '+str(fid_found))
     if fid_found == -1:
        print("find: ‘"+str(find_path)+"’: No such file or directory")
        return

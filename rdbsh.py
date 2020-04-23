@@ -261,7 +261,7 @@ def main(argv):
          else:
             print("Please check the arguments given for ls command")
       elif(cmdparam[0] == 'find'):
-         print("find Command")
+         #print("find Command")
          if len(cmdparam) == 1:
             find_main()
          elif len(cmdparam) == 2:
@@ -280,10 +280,6 @@ def main(argv):
          if '-n' in cmdparam:
             options.append('linenum')
             cmdparam.remove('-n')
-         if '-i' in cmdparam:
-            options.append('ignorecase')
-            cmdparam.remove('-i')
-         #print(cmdparam)
          if len(cmdparam) == 3:
             grep_main(cmdparam[1], cmdparam[2], options) 
       elif(cmdparam[0] == 'exit'):
